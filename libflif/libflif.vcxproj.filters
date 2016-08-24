@@ -1,0 +1,189 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="maniac">
+      <UniqueIdentifier>{45d6fccd-46d8-4d0c-8e9c-59bde0f3fa56}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="transform">
+      <UniqueIdentifier>{0e8f55d4-ac57-4cb7-97f6-35914f60c803}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library">
+      <UniqueIdentifier>{ef4fe90d-1186-470e-8147-ca4dc1417252}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="image">
+      <UniqueIdentifier>{e7722c4e-9787-4ac4-b175-b2505df06706}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="maniac\bit.cpp">
+      <Filter>maniac</Filter>
+    </ClCompile>
+    <ClCompile Include="maniac\chance.cpp">
+      <Filter>maniac</Filter>
+    </ClCompile>
+    <ClCompile Include="maniac\symbol.cpp">
+      <Filter>maniac</Filter>
+    </ClCompile>
+    <ClCompile Include="transform\factory.cpp">
+      <Filter>transform</Filter>
+    </ClCompile>
+    <ClCompile Include="flif-enc.cpp" />
+    <ClCompile Include="io.cpp" />
+    <ClCompile Include="common.cpp" />
+    <ClCompile Include="flif-dec.cpp" />
+    <ClCompile Include="library\flif-interface.cpp">
+      <Filter>library</Filter>
+    </ClCompile>
+    <ClCompile Include="library\flif-interface_common.cpp">
+      <Filter>library</Filter>
+    </ClCompile>
+    <ClCompile Include="library\flif-interface_dec.cpp">
+      <Filter>library</Filter>
+    </ClCompile>
+    <ClCompile Include="library\flif-interface_enc.cpp">
+      <Filter>library</Filter>
+    </ClCompile>
+    <ClCompile Include="image\color_range.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\crc32k.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image-pam.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image-png.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image-pnm.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+    <ClCompile Include="image\image-rggb.cpp">
+      <Filter>image</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="maniac\bit.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\chance.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\compound.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\compound_enc.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\rac.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\rac_enc.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\symbol.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\symbol_enc.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="maniac\util.hpp">
+      <Filter>maniac</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\bounds.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\colorbuckets.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\factory.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\framecombine.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\framedup.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\frameshape.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\palette.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\palette_A.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\palette_C.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\permute.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\transform.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\yc1c2.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="transform\ycocg.hpp">
+      <Filter>transform</Filter>
+    </ClInclude>
+    <ClInclude Include="flif-enc.hpp" />
+    <ClInclude Include="io.hpp" />
+    <ClInclude Include="common.hpp" />
+    <ClInclude Include="flif-dec.hpp" />
+    <ClInclude Include="library\flif-interface-private.hpp">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif-interface-private_common.hpp">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif-interface-private_dec.hpp">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif-interface-private_enc.hpp">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif.h">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif_common.h">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif_dec.h">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="library\flif_enc.h">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="image\color_range.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\crc32k.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h" />
+    <ClInclude Include="flif_config.h" />
+    <ClInclude Include="compiler-specific.hpp" />
+    <ClInclude Include="image\image.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image-pam.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image-png.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image-pnm.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="image\image-rggb.hpp">
+      <Filter>image</Filter>
+    </ClInclude>
+    <ClInclude Include="fileio.hpp" />
+  </ItemGroup>
+</Project>

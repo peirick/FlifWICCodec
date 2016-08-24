@@ -1,0 +1,8 @@
+*.opendb
+*.db
+/Release
+/x64
+/FlifWICCodec/Debug
+/FlifWICCodec/Release
+/FlifWICCodec/x64
+/Debug

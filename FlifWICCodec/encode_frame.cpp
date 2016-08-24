@@ -312,7 +312,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 	//Write and encode rows
 	for (UINT i = 0; i < rect.Height; ++i) {
 		BYTE* row = buffer.get() + i * cbStride;
-		write_row_from_channels(image, i, row, cbStride);
+		flif_write_row_N(image, i, row, cbStride);
 	}
 	container_->AddImage(image);
 	flif_destroy_image(image);

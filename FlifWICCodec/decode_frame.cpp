@@ -124,7 +124,7 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
 	const int width = rect.Width * nb_channels;
 
 	for (int src_y = rect.Y; src_y < rect.Y + rect.Height; ++src_y) {
-		flif_image_read_row_from_channels(image_, src_y, temp_row.get(), buffer_size);
+		flif_image_read_row_N(image_, src_y, temp_row.get(), buffer_size);
 		memcpy(dst_buffer, temp_row.get() + x_offset, width);
 		dst_buffer += cbStride;
 	}

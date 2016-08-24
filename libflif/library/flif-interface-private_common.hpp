@@ -37,10 +37,10 @@ struct FLIF_IMAGE
 {
     FLIF_IMAGE();
 
-	void write_row_from_channels(uint32_t row, const void* buffer, size_t buffer_size_bytes);
+	void write_row_N(uint32_t row, const void* buffer, size_t buffer_size_bytes);
     void write_row_RGBA8(uint32_t row, const void* buffer, size_t buffer_size_bytes);
     void read_row_RGBA8(uint32_t row, void* buffer, size_t buffer_size_bytes);
-	void read_row_from_channels(uint32_t row, void* buffer, size_t buffer_size_bytes);
+	void read_row_N(uint32_t row, void* buffer, size_t buffer_size_bytes);
     void write_row_RGBA16(uint32_t row, const void* buffer, size_t buffer_size_bytes);
     void read_row_RGBA16(uint32_t row, void* buffer, size_t buffer_size_bytes);
 

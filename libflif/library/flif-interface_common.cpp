@@ -53,7 +53,7 @@ void FLIF_IMAGE::write_row_RGBA8(uint32_t row, const void* buffer, size_t buffer
 	}
 }
 
-void FLIF_IMAGE::write_row_from_channels(uint32_t row, const void* buffer, size_t buffer_size_bytes) {
+void FLIF_IMAGE::write_row_N(uint32_t row, const void* buffer, size_t buffer_size_bytes) {
 	int nb_channels = image.numPlanes();
 	if (buffer_size_bytes < image.cols() *nb_channels)
 		return;
@@ -87,7 +87,7 @@ void FLIF_IMAGE::write_row_from_channels(uint32_t row, const void* buffer, size_
 }
 
 
-void FLIF_IMAGE::read_row_from_channels(uint32_t row, void* buffer, size_t buffer_size_bytes) {
+void FLIF_IMAGE::read_row_N(uint32_t row, void* buffer, size_t buffer_size_bytes) {
 	int nb_channels = image.numPlanes();
 	if (buffer_size_bytes < image.cols() * nb_channels)
 		return;
@@ -242,11 +242,11 @@ Exceptions must be caught no matter what.
 
 extern "C" {
 
-	FLIF_DLLEXPORT FLIF_IMAGE* FLIF_API flif_create_image(uint32_t width, uint32_t height, int planes) {
+	FLIF_DLLEXPORT FLIF_IMAGE* FLIF_API flif_create_image(uint32_t width, uint32_t height, int nb_channels) {
 		try
 		{
 			std::unique_ptr<FLIF_IMAGE> image(new FLIF_IMAGE());
-			image->image.init(width, height, 0, 255, planes);
+			image->image.init(width, height, 0, 255, nb_channels);
 			return image.release();
 		}
 		catch (...) {}
@@ -336,17 +336,17 @@ extern "C" {
 		catch (...) {}
 	}
 
-	FLIF_DLLEXPORT void FLIF_API write_row_from_channels(FLIF_IMAGE* image, uint32_t row, const void* buffer, size_t buffer_size_bytes) {
+	FLIF_DLLEXPORT void FLIF_API flif_write_row_N(FLIF_IMAGE* image, uint32_t row, const void* buffer, size_t buffer_size_bytes) {
 		try
 		{
-			image->write_row_from_channels(row, buffer, buffer_size_bytes);
+			image->write_row_N(row, buffer, buffer_size_bytes);
 		}
 		catch (...) {}
 	}
-	FLIF_DLLIMPORT void FLIF_API flif_image_read_row_from_channels(FLIF_IMAGE* image, uint32_t row, void* buffer, size_t buffer_size_bytes) {
+	FLIF_DLLIMPORT void FLIF_API flif_image_read_row_N(FLIF_IMAGE* image, uint32_t row, void* buffer, size_t buffer_size_bytes) {
 		try
 		{
-			image->read_row_from_channels(row, buffer, buffer_size_bytes);
+			image->read_row_N(row, buffer, buffer_size_bytes);
 		}
 		catch (...) {}
 	}

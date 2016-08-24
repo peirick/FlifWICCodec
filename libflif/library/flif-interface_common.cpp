@@ -336,7 +336,7 @@ extern "C" {
 		catch (...) {}
 	}
 
-	FLIF_DLLEXPORT void FLIF_API flif_write_row_N(FLIF_IMAGE* image, uint32_t row, const void* buffer, size_t buffer_size_bytes) {
+	FLIF_DLLEXPORT void FLIF_API flif_image_write_row_N(FLIF_IMAGE* image, uint32_t row, const void* buffer, size_t buffer_size_bytes) {
 		try
 		{
 			image->write_row_N(row, buffer, buffer_size_bytes);

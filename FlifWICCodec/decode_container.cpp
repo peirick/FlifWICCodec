@@ -180,7 +180,15 @@ HRESULT DecodeContainer::GetMetadataQueryReader(IWICMetadataQueryReader** ppIMet
 	TRACE1("(%p)\n", ppIMetadataQueryReader);
 	if (ppIMetadataQueryReader == NULL)
 		return E_INVALIDARG;
-	*ppIMetadataQueryReader = new DecodeMetadataQueryReader();
+	if (frames_.size() == 0)
+		return WINCODEC_ERR_NOTINITIALIZED;
+
+	UINT width;
+	UINT height;
+	HRESULT result = frames_[0].get()->GetSize(&width, &height);
+	if (FAILED(result))
+		return result;
+	*ppIMetadataQueryReader = new DecodeMetadataQueryReader(width, height);
 	return S_OK;
 }
 

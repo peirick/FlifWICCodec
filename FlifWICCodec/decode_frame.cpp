@@ -136,7 +136,9 @@ HRESULT DecodeFrame::GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadat
 	TRACE1("(%p)\n", ppIMetadataQueryReader);
 	if (ppIMetadataQueryReader == NULL)
 		return E_INVALIDARG;
-	*ppIMetadataQueryReader = new DecodeMetadataQueryReader();
+	uint32_t image_width = flif_image_get_width(image_);
+	uint32_t image_height = flif_image_get_height(image_);
+	*ppIMetadataQueryReader = new DecodeMetadataQueryReader(image_width, image_height);
 	return S_OK;
 }
 

@@ -4,7 +4,7 @@
 
 class DecodeMetadataQueryReader : public ComObjectBase<IWICMetadataQueryReader> {
 public:
-	DecodeMetadataQueryReader();
+	DecodeMetadataQueryReader(UINT width, UINT height);
 	~DecodeMetadataQueryReader();
 	// Inherited via IUnknown:
 	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override;
@@ -15,4 +15,7 @@ public:
 	HRESULT STDMETHODCALLTYPE GetMetadataByName(LPCWSTR wzName, PROPVARIANT * pvarValue) override;
 	HRESULT STDMETHODCALLTYPE GetEnumerator(IEnumString ** ppIEnumString) override;
 	HRESULT STDMETHODCALLTYPE GetContainerFormat(GUID *pguidContainerFormat) override;
+private:
+	UINT width_;
+	UINT height_;
 };

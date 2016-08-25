@@ -122,6 +122,43 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 
 	HRESULT result = S_OK;
 
+	//For GIFs get left top	
+	AnimationInformation animationInformation = {};
+	IWICBitmapFrameDecode* decodeframe;
+	if (SUCCEEDED(pIBitmapSource->QueryInterface(&decodeframe))) {
+		IWICMetadataQueryReader* metadataReader;
+		if (SUCCEEDED(decodeframe->GetMetadataQueryReader(&metadataReader)))
+		{
+			PROPVARIANT propValue;
+			PropVariantInit(&propValue);
+
+			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/imgdesc/Left", &propValue))) {
+				if (propValue.vt == VT_UI2) {
+					animationInformation.Left = propValue.uiVal;
+				}
+			}
+			PropVariantClear(&propValue);
+
+			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/imgdesc/Top", &propValue))) {
+				if (propValue.vt == VT_UI2) {
+					animationInformation.Top = propValue.uiVal;
+				}
+			}
+			PropVariantClear(&propValue);
+
+			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/Disposal", &propValue))) {
+				if (propValue.vt == VT_UI1) {
+					animationInformation.Disposal = propValue.bVal;
+				}
+			}
+			//L"/grctlext/Disposal"		VT_UI1
+			//L"/grctlext/UserInputFlag"		VT_BOOL
+			//L"/grctlext/TransparencyFlag"		VT_BOOL
+			//L"/grctlext/Delay"		VT_UI2
+			//L"/grctlext/TransparentColorIndex"		VT_UI1
+		}
+	}
+
 	//Check Rect
 	UINT image_width = 0;
 	UINT image_height = 0;
@@ -231,51 +268,50 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 		source_image = converter.get();
 	}
 
-	//Create image
+	//Create frame
 	result = source_image->GetPixelFormat(&source_pixel_format);
 	if (FAILED(result)) {
 		return result;
 	}
-	FLIF_IMAGE* image = nullptr;
-	UINT cbStride = 0;
+	RawFrame* frame = nullptr;
 	if (source_pixel_format == GUID_WICPixelFormat32bppBGRA ||
 		source_pixel_format == GUID_WICPixelFormat32bppRGBA)
 	{
-		image = flif_create_image(uiWidth_, uiHeight_, 4);
-		cbStride = rect.Width * 4;
+		uint32_t stride = rect.Width * 4;
+		frame = new RawFrame(rect.Width, rect.Height, 4, stride);
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat24bppBGR ||
 		source_pixel_format == GUID_WICPixelFormat24bppRGB)
 	{
-		image = flif_create_image(uiWidth_, uiHeight_, 3);
-		cbStride = 4 * ((24 * (UINT)rect.Width + 31) / 32);
+		uint32_t stride = 4 * ((24 * (UINT)rect.Width + 31) / 32);
+		frame = new RawFrame(rect.Width, rect.Height, 3, stride);
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat32bppBGR ||
 		source_pixel_format == GUID_WICPixelFormat32bppRGB)
 	{
-		image = flif_create_image(uiWidth_, uiHeight_, 3);
-		cbStride = rect.Width * 4;
+		uint32_t stride = rect.Width * 4;
+		frame = new RawFrame(rect.Width, rect.Height, 3, stride);
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat8bppGray)
 	{
-		image = flif_create_image(uiWidth_, uiHeight_, 1);
-		cbStride = rect.Width;
+		uint32_t stride = rect.Width;
+		frame = new RawFrame(rect.Width, rect.Height, 1, stride);
 	}
 	else
 	{
 		return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
 	}
-
-	//Read Source Pixel
-	const UINT cbBufferSize = cbStride * rect.Height;
-	scoped_buffer buffer(cbBufferSize);
-	if (buffer.alloc_failed())
+	if (frame->Buffer == NULL)
 	{
+		delete frame;
 		return E_OUTOFMEMORY;
 	}
-	result = source_image->CopyPixels(&rect, cbStride, cbBufferSize, buffer.get());
+
+	//Read Source Pixel
+	result = source_image->CopyPixels(&rect, frame->Stride, frame->BufferSize, frame->Buffer);
 	if (FAILED(result))
 	{
+		delete frame;
 		return result;
 	}
 
@@ -283,39 +319,33 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 	if (source_pixel_format == GUID_WICPixelFormat32bppBGRA)
 	{
 		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = buffer.get() + i * cbStride;
+			BYTE* row = frame->Buffer + i * frame->Stride;
 			BGRA8ToRGBA8Row(rect.Width, row);
 		}
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat24bppBGR)
 	{
 		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = buffer.get() + i * cbStride;
+			BYTE* row = frame->Buffer + i * frame->Stride;
 			BGR8ToRGB8Row(rect.Width, row);
 		}
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat32bppBGR)
 	{
 		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = buffer.get() + i * cbStride;
+			BYTE* row = frame->Buffer + i * frame->Stride;
 			BGRX8ToRGB8Row(rect.Width, row);
 		}
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat32bppRGB)
 	{
 		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = buffer.get() + i * cbStride;
+			BYTE* row = frame->Buffer + i * frame->Stride;
 			RGBX8ToRGB8Row(rect.Width, row);
 		}
 	}
 
-	//Write and encode rows
-	for (UINT i = 0; i < rect.Height; ++i) {
-		BYTE* row = buffer.get() + i * cbStride;
-		flif_image_write_row_N(image, i, row, cbStride);
-	}
-	container_->AddImage(image);
-	flif_destroy_image(image);
+	container_->AddImage(frame, animationInformation);
 	return S_OK;
 
 }

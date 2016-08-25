@@ -2,7 +2,8 @@
 #include "encode_frame.h"
 #include "uuid.h"
 
-EncodeContainer::EncodeContainer() : encoder_(nullptr), image_count(0)
+EncodeContainer::EncodeContainer()
+	: encoder_(nullptr), current_frame_(nullptr)
 {
 	TRACE("()\n");
 	InitializeCriticalSection(&cs_);
@@ -14,6 +15,10 @@ EncodeContainer::~EncodeContainer()
 	if (encoder_) {
 		flif_destroy_encoder(encoder_);
 		encoder_ = nullptr;
+	}
+	if (current_frame_) {
+		delete current_frame_;
+		current_frame_ = nullptr;
 	}
 }
 
@@ -35,12 +40,23 @@ HRESULT EncodeContainer::QueryInterface(REFIID riid, void ** ppvObject)
 HRESULT EncodeContainer::Initialize(IStream * pIStream, WICBitmapEncoderCacheOption cacheOptions)
 {
 	TRACE2("(%p, %x)\n", pIStream, cacheOptions);
+	if (pIStream == NULL)
+		return E_INVALIDARG;
+	pIStream_ = pIStream;
+
+	//reset encoder
 	if (encoder_) {
 		flif_destroy_encoder(encoder_);
 		encoder_ = nullptr;
 	}
 	encoder_ = flif_create_encoder();
-	pIStream_ = pIStream;
+
+	//reset current frame
+	if (current_frame_) {
+		delete current_frame_;
+		current_frame_ = nullptr;
+	}
+
 	return S_OK;
 }
 
@@ -130,7 +146,8 @@ HRESULT EncodeContainer::Commit(void)
 		return WINCODEC_ERR_NOTINITIALIZED;
 	}
 
-	if (image_count > 0) {
+	if (current_frame_)
+	{
 		uint8_t* buffer = nullptr;
 		size_t buffer_size = 0;
 		if (flif_encoder_encode_memory(encoder_, reinterpret_cast<void**>(&buffer), &buffer_size) != 0) {
@@ -153,11 +170,38 @@ HRESULT EncodeContainer::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMe
 	return E_NOTIMPL;
 }
 
-HRESULT EncodeContainer::AddImage(FLIF_IMAGE * image)
+HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animationInformation)
 {
 	if (encoder_ == nullptr) {
 		return WINCODEC_ERR_NOTINITIALIZED;
 	}
+
+	//Merge current frame
+	if (current_frame_) {
+		if (current_frame_->NumberComponents != frame->NumberComponents) {
+			delete frame;
+			return WINCODEC_ERR_INTERNALERROR;
+		}
+		//Todo: Merge correctly
+		for (UINT i = 0; i < frame->Height; ++i) {
+			BYTE* srcrow = frame->Buffer + i * frame->Stride;
+			BYTE* destrow = current_frame_->Buffer + (i + animationInformation.Top) * current_frame_->Stride;
+			BYTE* destrowstart = destrow + animationInformation.Left * current_frame_->NumberComponents;
+			memcpy(destrowstart, srcrow, frame->Width*frame->NumberComponents);
+		}
+		delete frame;
+	}
+	else
+	{
+		current_frame_ = frame;
+	}
+
+	//Write and encode rows
+	FLIF_IMAGE* image = flif_create_image(current_frame_->Width, current_frame_->Height, current_frame_->NumberComponents);
+	for (UINT i = 0; i < current_frame_->Height; ++i) {
+		BYTE* row = current_frame_->Buffer + i * current_frame_->Stride;
+		flif_image_write_row_N(image, i, row, current_frame_->Stride);
+	}
 	flif_encoder_add_image(encoder_, image);
-	++image_count;
+	flif_destroy_image(image);
 }

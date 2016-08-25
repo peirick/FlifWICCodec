@@ -57,7 +57,7 @@ HRESULT DecodeMetadataQueryReader::GetMetadataByName(LPCWSTR wzName, PROPVARIANT
 	}
 	else if (_wcsicmp(L"/logscrdesc/PixelAspectRatio", wzName) == 0)
 	{
-		pvarValue->uiVal = 0;
+		pvarValue->bVal = 0;
 		pvarValue->vt = VT_UI1;
 		return S_OK;
 	}
@@ -96,7 +96,7 @@ HRESULT DecodeMetadataQueryReader::GetMetadataByName(LPCWSTR wzName, PROPVARIANT
 	else if (_wcsicmp(L"/grctlext/Disposal", wzName) == 0)
 	{
 		//Clear befor draw new frame
-		pvarValue->uiVal = 2;
+		pvarValue->bVal = 2;
 		pvarValue->vt = VT_UI1;
 		return S_OK;
 	}

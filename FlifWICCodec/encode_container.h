@@ -5,6 +5,42 @@
 #include <library/flif_enc.h>
 #include "utils.h"
 
+struct AnimationInformation {
+	uint32_t Left;
+	uint32_t Top;
+	uint8_t Disposal;
+	bool UserInputFlag;
+	bool TransparencyFlag;
+	uint32_t Delay;
+	uint8_t TransparentColorIndex;
+};
+
+struct RawFrame {
+	uint32_t Width;
+	uint32_t Height;
+	uint32_t NumberComponents;
+	uint32_t Stride;
+	size_t BufferSize;
+	uint8_t* Buffer;
+
+	RawFrame(uint32_t width, uint32_t height, uint32_t numberComponents, uint32_t stride)
+		: Width(width), Height(height), NumberComponents(numberComponents), Stride(stride),
+		BufferSize(stride*height), Buffer(nullptr)
+	{
+		Buffer = (uint8_t*)CoTaskMemAlloc(BufferSize);
+	}
+	RawFrame()
+		: Width(0), Height(0), NumberComponents(0), Stride(0), BufferSize(0), Buffer(nullptr)
+	{
+	}
+	~RawFrame()
+	{
+		if (Buffer) {
+			CoTaskMemFree(Buffer);
+		}
+	}
+};
+
 class EncodeContainer : public ComObjectBase<IWICBitmapEncoder> {
 public:
 	EncodeContainer();
@@ -25,13 +61,13 @@ public:
 	HRESULT STDMETHODCALLTYPE Commit(void) override;
 	HRESULT STDMETHODCALLTYPE GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetadataQueryWriter) override;
 public:
-	HRESULT AddImage(FLIF_IMAGE* image);
+	HRESULT AddImage(RawFrame* frame, AnimationInformation animationInformation);
 private:
 	// No copy and assign.
 	EncodeContainer(const EncodeContainer&) = delete;
 	void operator=(const EncodeContainer&) = delete;
 
-	int image_count;
+	RawFrame* current_frame_;
 	FLIF_ENCODER* encoder_;
 	IStream* pIStream_;
 	ComPtr<IWICImagingFactory> factory_;

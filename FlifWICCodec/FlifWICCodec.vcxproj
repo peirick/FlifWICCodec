@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClCompile Include="decode_container.cpp" />
     <ClCompile Include="decode_frame.cpp" />
+    <ClCompile Include="decode_metadata_reader.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -186,7 +187,7 @@
     <ClInclude Include="..\extern\stb_image_write.h" />
     <ClInclude Include="decode_container.h" />
     <ClInclude Include="decode_frame.h" />
-    <ClInclude Include="dllmain.h" />
+    <ClInclude Include="decode_metadata_reader.h" />
     <ClInclude Include="encode_container.h" />
     <ClInclude Include="encode_frame.h" />
     <ClInclude Include="pixel_converter.h" />

@@ -31,7 +31,7 @@ private:
 	EncodeContainer(const EncodeContainer&) = delete;
 	void operator=(const EncodeContainer&) = delete;
 
-	bool can_commit_;
+	int image_count;
 	FLIF_ENCODER* encoder_;
 	IStream* pIStream_;
 	ComPtr<IWICImagingFactory> factory_;

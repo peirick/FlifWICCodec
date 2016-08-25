@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "decode_container.h"
 #include "decode_frame.h"
+#include "decode_metadata_reader.h"
 
 DecodeContainer::DecodeContainer() : decoder_(nullptr)
 {
@@ -177,7 +178,10 @@ HRESULT DecodeContainer::CopyPalette(IWICPalette* pIPalette) {
 
 HRESULT DecodeContainer::GetMetadataQueryReader(IWICMetadataQueryReader** ppIMetadataQueryReader) {
 	TRACE1("(%p)\n", ppIMetadataQueryReader);
-	return WINCODEC_ERR_UNSUPPORTEDOPERATION;
+	if (ppIMetadataQueryReader == NULL)
+		return E_INVALIDARG;
+	*ppIMetadataQueryReader = new DecodeMetadataQueryReader();
+	return S_OK;
 }
 
 HRESULT DecodeContainer::GetPreview(IWICBitmapSource** ppIBitmapSource) {

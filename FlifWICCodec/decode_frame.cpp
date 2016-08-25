@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <memory>
 #include "decode_frame.h"
+#include "decode_metadata_reader.h"
 #include "dllmain.h"
 
 #ifdef FLIF_DEBUG_LOGGING
@@ -133,7 +134,10 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
 
 HRESULT DecodeFrame::GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadataQueryReader) {
 	TRACE1("(%p)\n", ppIMetadataQueryReader);
-	return WINCODEC_ERR_UNSUPPORTEDOPERATION;
+	if (ppIMetadataQueryReader == NULL)
+		return E_INVALIDARG;
+	*ppIMetadataQueryReader = new DecodeMetadataQueryReader();
+	return S_OK;
 }
 
 HRESULT DecodeFrame::GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) {

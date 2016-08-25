@@ -10,22 +10,22 @@ class DecodeContainer : public ComObjectBase<IWICBitmapDecoder> {
 public:
 	DecodeContainer();
 	~DecodeContainer();
-	// IUnknown:
+	// Inherited via IUnknown:
 	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override;
 	ULONG STDMETHODCALLTYPE AddRef() override { return ComObjectBase::AddRef(); }
 	ULONG STDMETHODCALLTYPE Release() override { return ComObjectBase::Release(); }
-	// IWICBitmapDecoder:
-	virtual HRESULT STDMETHODCALLTYPE QueryCapability(IStream *pIStream, DWORD *pdwCapability) override;
-	virtual HRESULT STDMETHODCALLTYPE Initialize(IStream *pIStream, WICDecodeOptions cacheOptions) override;
-	virtual HRESULT STDMETHODCALLTYPE GetContainerFormat(GUID *pguidContainerFormat) override;
-	virtual HRESULT STDMETHODCALLTYPE GetDecoderInfo(IWICBitmapDecoderInfo **ppIDecoderInfo) override;
-	virtual HRESULT STDMETHODCALLTYPE CopyPalette(IWICPalette *pIPalette)override;
-	virtual HRESULT STDMETHODCALLTYPE GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadataQueryReader)override;
-	virtual HRESULT STDMETHODCALLTYPE GetPreview(IWICBitmapSource **ppIBitmapSource)override;
-	virtual HRESULT STDMETHODCALLTYPE GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount)override;
-	virtual HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail)override;
-	virtual HRESULT STDMETHODCALLTYPE GetFrameCount(UINT *pCount)override;
-	virtual HRESULT STDMETHODCALLTYPE GetFrame(UINT index, IWICBitmapFrameDecode **ppIBitmapFrame)override;
+	// Inherited via IWICBitmapDecoder:
+	HRESULT STDMETHODCALLTYPE QueryCapability(IStream *pIStream, DWORD *pdwCapability) override;
+	HRESULT STDMETHODCALLTYPE Initialize(IStream *pIStream, WICDecodeOptions cacheOptions) override;
+	HRESULT STDMETHODCALLTYPE GetContainerFormat(GUID *pguidContainerFormat) override;
+	HRESULT STDMETHODCALLTYPE GetDecoderInfo(IWICBitmapDecoderInfo **ppIDecoderInfo) override;
+	HRESULT STDMETHODCALLTYPE CopyPalette(IWICPalette *pIPalette)override;
+	HRESULT STDMETHODCALLTYPE GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadataQueryReader)override;
+	HRESULT STDMETHODCALLTYPE GetPreview(IWICBitmapSource **ppIBitmapSource)override;
+	HRESULT STDMETHODCALLTYPE GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount)override;
+	HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail)override;
+	HRESULT STDMETHODCALLTYPE GetFrameCount(UINT *pCount)override;
+	HRESULT STDMETHODCALLTYPE GetFrame(UINT index, IWICBitmapFrameDecode **ppIBitmapFrame)override;
 private:
 	// No copy and assign.
 	DecodeContainer(const DecodeContainer&) = delete;
@@ -35,4 +35,6 @@ private:
 	std::deque<ComPtr<DecodeFrame>> frames_;
 	ComPtr<IWICImagingFactory> factory_;
 	CRITICAL_SECTION cs_;
+
+
 };

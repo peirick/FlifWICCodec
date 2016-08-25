@@ -2,7 +2,7 @@
 #include "encode_frame.h"
 #include "uuid.h"
 
-EncodeContainer::EncodeContainer() : encoder_(nullptr), can_commit_(false)
+EncodeContainer::EncodeContainer() : encoder_(nullptr), image_count(0)
 {
 	TRACE("()\n");
 	InitializeCriticalSection(&cs_);
@@ -130,7 +130,7 @@ HRESULT EncodeContainer::Commit(void)
 		return WINCODEC_ERR_NOTINITIALIZED;
 	}
 
-	if (can_commit_) {
+	if (image_count > 0) {
 		uint8_t* buffer = nullptr;
 		size_t buffer_size = 0;
 		if (flif_encoder_encode_memory(encoder_, reinterpret_cast<void**>(&buffer), &buffer_size) != 0) {
@@ -159,5 +159,5 @@ HRESULT EncodeContainer::AddImage(FLIF_IMAGE * image)
 		return WINCODEC_ERR_NOTINITIALIZED;
 	}
 	flif_encoder_add_image(encoder_, image);
-	can_commit_ = true;
+	++image_count;
 }

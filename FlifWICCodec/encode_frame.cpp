@@ -53,34 +53,30 @@ HRESULT EncodeFrame::SetPixelFormat(WICPixelFormatGUID * pPixelFormat)
 	if (pPixelFormat == NULL)
 		return E_INVALIDARG;
 
-	if (*pPixelFormat == GUID_WICPixelFormat24bppRGB ||
-		*pPixelFormat == GUID_WICPixelFormat24bppBGR ||
-		*pPixelFormat == GUID_WICPixelFormat32bppBGRA ||
-		*pPixelFormat == GUID_WICPixelFormat32bppRGBA ||
+	//supported nativly
+	if (*pPixelFormat == GUID_WICPixelFormat32bppRGBA ||
+		*pPixelFormat == GUID_WICPixelFormat24bppRGB ||
 		*pPixelFormat == GUID_WICPixelFormat8bppGray)
 	{
 		return S_OK;
 	}
 
-	if (*pPixelFormat == GUID_WICPixelFormat2bppIndexed ||
+	//supported through converter
+	if (*pPixelFormat == GUID_WICPixelFormatBlackWhite ||
+		*pPixelFormat == GUID_WICPixelFormat2bppGray ||
+		*pPixelFormat == GUID_WICPixelFormat4bppGray ||
+		*pPixelFormat == GUID_WICPixelFormat32bppBGRA ||
+		*pPixelFormat == GUID_WICPixelFormat16bppBGRA5551 ||
+		*pPixelFormat == GUID_WICPixelFormat16bppBGR555 ||
+		*pPixelFormat == GUID_WICPixelFormat16bppBGR565 ||
+		*pPixelFormat == GUID_WICPixelFormat24bppBGR ||
+		*pPixelFormat == GUID_WICPixelFormat32bppRGB ||
+		*pPixelFormat == GUID_WICPixelFormat32bppBGR ||
+		*pPixelFormat == GUID_WICPixelFormat1bppIndexed ||
+		*pPixelFormat == GUID_WICPixelFormat2bppIndexed ||
 		*pPixelFormat == GUID_WICPixelFormat4bppIndexed ||
 		*pPixelFormat == GUID_WICPixelFormat8bppIndexed)
 	{
-		*pPixelFormat = GUID_WICPixelFormat24bppRGB;
-		return S_OK;
-	}
-
-	if (*pPixelFormat == GUID_WICPixelFormat1bppIndexed ||
-		*pPixelFormat == GUID_WICPixelFormatBlackWhite)
-	{
-		*pPixelFormat = GUID_WICPixelFormat8bppGray;
-		return S_OK;
-	}
-
-	if (*pPixelFormat == GUID_WICPixelFormat32bppRGB ||
-		*pPixelFormat == GUID_WICPixelFormat32bppBGR)
-	{
-		*pPixelFormat = GUID_WICPixelFormat24bppRGB;
 		return S_OK;
 	}
 
@@ -120,8 +116,8 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 
 	HRESULT result = S_OK;
 
-	//For GIFs get left top	
-	AnimationInformation animationInformation = {};
+	//For GIFs get animation information
+	AnimationInformation animation_information = {};
 	ComPtr<IWICBitmapFrameDecode> decodeframe;
 	if (SUCCEEDED(pIBitmapSource->QueryInterface(decodeframe.get_out_storage()))) {
 		ComPtr<IWICMetadataQueryReader> metadataReader;
@@ -132,50 +128,38 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 
 			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/imgdesc/Left", &propValue))) {
 				if (propValue.vt == VT_UI2) {
-					animationInformation.Left = propValue.uiVal;
+					animation_information.Left = propValue.uiVal;
 				}
 			}
 			PropVariantClear(&propValue);
 
 			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/imgdesc/Top", &propValue))) {
 				if (propValue.vt == VT_UI2) {
-					animationInformation.Top = propValue.uiVal;
+					animation_information.Top = propValue.uiVal;
 				}
 			}
 			PropVariantClear(&propValue);
 
 			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/Disposal", &propValue))) {
 				if (propValue.vt == VT_UI1) {
-					animationInformation.Disposal = propValue.bVal;
+					animation_information.Disposal = propValue.bVal;
 				}
 			}
 			PropVariantClear(&propValue);
 
 			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/Delay", &propValue))) {
 				if (propValue.vt == VT_UI2) {
-					animationInformation.Delay = propValue.uiVal;
+					animation_information.Delay = propValue.uiVal;
 				}
 			}
 			PropVariantClear(&propValue);
-
-			//if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/TransparentColorIndex", &propValue))) {
-			//	if (propValue.vt == VT_UI1) {
-			//		animationInformation.TransparentColorIndex = propValue.bVal;
-			//	}
-			//}
-			//PropVariantClear(&propValue);
 
 			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/TransparencyFlag", &propValue))) {
 				if (propValue.vt == VT_BOOL) {
-					animationInformation.TransparencyFlag = propValue.boolVal;
+					animation_information.TransparencyFlag = propValue.boolVal;
 				}
 			}
 			PropVariantClear(&propValue);
-			//L"/grctlext/Disposal"		VT_UI1
-			//L"/grctlext/UserInputFlag"		VT_BOOL
-			//L"/grctlext/TransparencyFlag"		VT_BOOL
-			//L"/grctlext/Delay"		VT_UI2
-			//L"/grctlext/TransparentColorIndex"		VT_UI1
 		}
 	}
 
@@ -195,23 +179,19 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 		rect.Y + rect.Height > image_height)
 		return E_INVALIDARG;
 
-
+	//Convert Image
 	WICPixelFormatGUID source_pixel_format = { 0 };
 	result = pIBitmapSource->GetPixelFormat(&source_pixel_format);
 	if (FAILED(result)) {
 		return result;
 	}
-
-	//Convert Indexed Images
 	IWICBitmapSource* source_image = pIBitmapSource;
 	ComPtr<IWICFormatConverter> converter;
-	if (source_pixel_format == GUID_WICPixelFormat1bppIndexed ||
-		source_pixel_format == GUID_WICPixelFormat2bppIndexed ||
-		source_pixel_format == GUID_WICPixelFormat4bppIndexed ||
-		source_pixel_format == GUID_WICPixelFormat8bppIndexed ||
-		source_pixel_format == GUID_WICPixelFormatBlackWhite)
+	if (source_pixel_format != GUID_WICPixelFormat32bppRGBA &&
+		source_pixel_format != GUID_WICPixelFormat24bppRGB &&
+		source_pixel_format != GUID_WICPixelFormat8bppGray)
 	{
-
+		//Create factory
 		ComPtr<IWICImagingFactory> factory;
 		result = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
 		if (FAILED(result)) {
@@ -220,11 +200,30 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 
 		//Set destination pixelformat
 		WICPixelFormatGUID dest_pixel_format = { 0 };
-		if (source_pixel_format == GUID_WICPixelFormatBlackWhite)
+		if (source_pixel_format == GUID_WICPixelFormatBlackWhite ||
+			source_pixel_format == GUID_WICPixelFormat2bppGray ||
+			source_pixel_format == GUID_WICPixelFormat4bppGray)
 		{
 			dest_pixel_format = GUID_WICPixelFormat8bppGray;
 		}
-		else
+		else if (source_pixel_format == GUID_WICPixelFormat32bppBGRA ||
+			source_pixel_format == GUID_WICPixelFormat16bppBGRA5551)
+		{
+			dest_pixel_format = GUID_WICPixelFormat32bppRGBA;
+		}
+		else if (
+			source_pixel_format == GUID_WICPixelFormat16bppBGR555 ||
+			source_pixel_format == GUID_WICPixelFormat16bppBGR565 ||
+			source_pixel_format == GUID_WICPixelFormat24bppBGR ||
+			source_pixel_format == GUID_WICPixelFormat32bppBGR ||
+			source_pixel_format == GUID_WICPixelFormat32bppRGB)
+		{
+			dest_pixel_format = GUID_WICPixelFormat24bppRGB;
+		}
+		else if (source_pixel_format == GUID_WICPixelFormat1bppIndexed ||
+			source_pixel_format == GUID_WICPixelFormat2bppIndexed ||
+			source_pixel_format == GUID_WICPixelFormat4bppIndexed ||
+			source_pixel_format == GUID_WICPixelFormat8bppIndexed)
 		{
 			//Set destination pixelformat from palette info
 			ComPtr<IWICPalette> palette;
@@ -236,7 +235,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 			if (FAILED(result)) {
 				return result;
 			}
-			dest_pixel_format = GUID_WICPixelFormat32bppRGB;
+			dest_pixel_format = GUID_WICPixelFormat24bppRGB;
 			BOOL HasAlpha = false;
 			result = palette->HasAlpha(&HasAlpha);
 			if (FAILED(result)) {
@@ -247,20 +246,24 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 			}
 			else
 			{
-				BOOL IsGrayscale = false;
-				result = palette->IsGrayscale(&IsGrayscale);
+				BOOL is_grayscale = false;
+				result = palette->IsGrayscale(&is_grayscale);
 				if (FAILED(result)) {
 					return result;
 				}
-				BOOL IsBlackWhite = false;
-				result = palette->IsBlackWhite(&IsBlackWhite);
+				BOOL is_blackwhite = false;
+				result = palette->IsBlackWhite(&is_blackwhite);
 				if (FAILED(result)) {
 					return result;
 				}
-				if (IsGrayscale || IsBlackWhite) {
+				if (is_grayscale || is_blackwhite) {
 					dest_pixel_format = GUID_WICPixelFormat8bppGray;
 				}
 			}
+		}
+		else
+		{
+			return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
 		}
 
 		//Create Converter		
@@ -268,13 +271,13 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 		if (FAILED(result)) {
 			return result;
 		}
-		BOOL CanConvert = false;
-		result = converter->CanConvert(source_pixel_format, dest_pixel_format, &CanConvert);
+		BOOL can_convert = false;
+		result = converter->CanConvert(source_pixel_format, dest_pixel_format, &can_convert);
 		if (FAILED(result))
 		{
 			return result;
 		}
-		if (!CanConvert) {
+		if (!can_convert) {
 			return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
 		}
 		result = converter->Initialize(
@@ -284,7 +287,6 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 		if (FAILED(result)) {
 			return result;
 		}
-
 		source_image = converter.get();
 	}
 
@@ -293,23 +295,18 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 	if (FAILED(result)) {
 		return result;
 	}
+	assert(source_pixel_format == GUID_WICPixelFormat32bppRGBA ||
+		source_pixel_format == GUID_WICPixelFormat24bppRGB ||
+		source_pixel_format == GUID_WICPixelFormat8bppGray);
 	RawFrame* frame = nullptr;
-	if (source_pixel_format == GUID_WICPixelFormat32bppBGRA ||
-		source_pixel_format == GUID_WICPixelFormat32bppRGBA)
+	if (source_pixel_format == GUID_WICPixelFormat32bppRGBA)
 	{
 		uint32_t stride = rect.Width * 4;
 		frame = new RawFrame(rect.Width, rect.Height, 4, stride);
 	}
-	else if (source_pixel_format == GUID_WICPixelFormat24bppBGR ||
-		source_pixel_format == GUID_WICPixelFormat24bppRGB)
+	else if (source_pixel_format == GUID_WICPixelFormat24bppRGB)
 	{
 		uint32_t stride = 4 * ((24 * (UINT)rect.Width + 31) / 32);
-		frame = new RawFrame(rect.Width, rect.Height, 3, stride);
-	}
-	else if (source_pixel_format == GUID_WICPixelFormat32bppBGR ||
-		source_pixel_format == GUID_WICPixelFormat32bppRGB)
-	{
-		uint32_t stride = rect.Width * 4;
 		frame = new RawFrame(rect.Width, rect.Height, 3, stride);
 	}
 	else if (source_pixel_format == GUID_WICPixelFormat8bppGray)
@@ -335,37 +332,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 		return result;
 	}
 
-	//Internal convertion of rows
-	if (source_pixel_format == GUID_WICPixelFormat32bppBGRA)
-	{
-		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = frame->Buffer + i * frame->Stride;
-			BGRA8ToRGBA8Row(rect.Width, row);
-		}
-	}
-	else if (source_pixel_format == GUID_WICPixelFormat24bppBGR)
-	{
-		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = frame->Buffer + i * frame->Stride;
-			BGR8ToRGB8Row(rect.Width, row);
-		}
-	}
-	else if (source_pixel_format == GUID_WICPixelFormat32bppBGR)
-	{
-		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = frame->Buffer + i * frame->Stride;
-			BGRX8ToRGB8Row(rect.Width, row);
-		}
-	}
-	else if (source_pixel_format == GUID_WICPixelFormat32bppRGB)
-	{
-		for (UINT i = 0; i < rect.Height; ++i) {
-			BYTE* row = frame->Buffer + i * frame->Stride;
-			RGBX8ToRGB8Row(rect.Width, row);
-		}
-	}
-
-	container_->AddImage(frame, animationInformation);
+	container_->AddImage(frame, animation_information);
 	return S_OK;
 
 }

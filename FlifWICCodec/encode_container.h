@@ -9,10 +9,8 @@ struct AnimationInformation {
 	uint32_t Left;
 	uint32_t Top;
 	uint8_t Disposal;
-	bool UserInputFlag;
 	bool TransparencyFlag;
 	uint32_t Delay;
-	uint8_t TransparentColorIndex;
 };
 
 struct RawFrame {

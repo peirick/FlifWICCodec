@@ -1,6 +1,7 @@
 #include "encode_container.h"
 #include "encode_frame.h"
 #include "uuid.h"
+#include "pixel_converter.h"
 
 EncodeContainer::EncodeContainer()
 	: encoder_(nullptr), current_frame_(nullptr)
@@ -182,12 +183,26 @@ HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animatio
 			delete frame;
 			return WINCODEC_ERR_INTERNALERROR;
 		}
-		//Todo: Merge correctly
-		for (UINT i = 0; i < frame->Height; ++i) {
-			BYTE* srcrow = frame->Buffer + i * frame->Stride;
-			BYTE* destrow = current_frame_->Buffer + (i + animationInformation.Top) * current_frame_->Stride;
-			BYTE* destrowstart = destrow + animationInformation.Left * current_frame_->NumberComponents;
-			memcpy(destrowstart, srcrow, frame->Width*frame->NumberComponents);
+
+		if (animationInformation.TransparencyFlag && frame->NumberComponents == 4) {
+			//Must be RGBA and Alpha channel has only values 0 or FF
+			assert(frame->NumberComponents == 4);
+			for (UINT i = 0; i < frame->Height; ++i) {
+				BYTE* srcrow = frame->Buffer + i * frame->Stride;
+				BYTE* destrow = current_frame_->Buffer + (i + animationInformation.Top) * current_frame_->Stride;
+				BYTE* destrowstart = destrow + animationInformation.Left * current_frame_->NumberComponents;
+				CopyRGBA8ToRGBA8Row(frame->Width, srcrow, destrowstart);
+			}
+		}
+		else {
+			//Must be RGB or Gray
+			assert(frame->NumberComponents < 4);
+			for (UINT i = 0; i < frame->Height; ++i) {
+				BYTE* srcrow = frame->Buffer + i * frame->Stride;
+				BYTE* destrow = current_frame_->Buffer + (i + animationInformation.Top) * current_frame_->Stride;
+				BYTE* destrowstart = destrow + animationInformation.Left * current_frame_->NumberComponents;
+				memcpy(destrowstart, srcrow, frame->Width*frame->NumberComponents);
+			}
 		}
 		delete frame;
 	}

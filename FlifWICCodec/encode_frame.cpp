@@ -38,8 +38,6 @@ HRESULT EncodeFrame::Initialize(IPropertyBag2 * pIEncoderOptions)
 HRESULT EncodeFrame::SetSize(UINT uiWidth, UINT uiHeight)
 {
 	TRACE2("(%d, %d)\n", uiWidth, uiHeight);
-	uiWidth_ = uiWidth;
-	uiHeight_ = uiHeight;
 	return S_OK;
 }
 
@@ -124,10 +122,10 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 
 	//For GIFs get left top	
 	AnimationInformation animationInformation = {};
-	IWICBitmapFrameDecode* decodeframe;
-	if (SUCCEEDED(pIBitmapSource->QueryInterface(&decodeframe))) {
-		IWICMetadataQueryReader* metadataReader;
-		if (SUCCEEDED(decodeframe->GetMetadataQueryReader(&metadataReader)))
+	ComPtr<IWICBitmapFrameDecode> decodeframe;
+	if (SUCCEEDED(pIBitmapSource->QueryInterface(decodeframe.get_out_storage()))) {
+		ComPtr<IWICMetadataQueryReader> metadataReader;
+		if (SUCCEEDED(decodeframe->GetMetadataQueryReader(metadataReader.get_out_storage())))
 		{
 			PROPVARIANT propValue;
 			PropVariantInit(&propValue);
@@ -151,6 +149,28 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 					animationInformation.Disposal = propValue.bVal;
 				}
 			}
+			PropVariantClear(&propValue);
+
+			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/Delay", &propValue))) {
+				if (propValue.vt == VT_UI2) {
+					animationInformation.Delay = propValue.uiVal;
+				}
+			}
+			PropVariantClear(&propValue);
+
+			//if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/TransparentColorIndex", &propValue))) {
+			//	if (propValue.vt == VT_UI1) {
+			//		animationInformation.TransparentColorIndex = propValue.bVal;
+			//	}
+			//}
+			//PropVariantClear(&propValue);
+
+			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/TransparencyFlag", &propValue))) {
+				if (propValue.vt == VT_BOOL) {
+					animationInformation.TransparencyFlag = propValue.boolVal;
+				}
+			}
+			PropVariantClear(&propValue);
 			//L"/grctlext/Disposal"		VT_UI1
 			//L"/grctlext/UserInputFlag"		VT_BOOL
 			//L"/grctlext/TransparencyFlag"		VT_BOOL
@@ -268,7 +288,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 		source_image = converter.get();
 	}
 
-	//Create frame
+	//Create raw frame
 	result = source_image->GetPixelFormat(&source_pixel_format);
 	if (FAILED(result)) {
 		return result;

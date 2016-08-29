@@ -29,9 +29,6 @@ private:
 	// No copy and assign.
 	EncodeFrame(const EncodeFrame&) = delete;
 	void operator=(const EncodeFrame&) = delete;
-
-	UINT uiWidth_;
-	UINT uiHeight_;
 	EncodeContainer* container_;
 };
 

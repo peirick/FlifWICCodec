@@ -64,3 +64,18 @@ void RGBX8ToRGB8Row(size_t width, void* row) {
 		dst[i].b = temp.b;
 	}
 }
+
+void CopyRGBA8ToRGBA8Row(size_t width, void* sourceRow, void* destRow) {
+	RGBA* src = (RGBA*)sourceRow;
+	RGBA* dst = (RGBA*)destRow;
+	for (size_t i = 0; i < width; ++i) {
+		const RGBA temp = src[i];
+		//Don't copy fully transparent pixel
+		if (temp.a == 0)
+			continue;
+		dst[i].r = temp.r;
+		dst[i].g = temp.g;
+		dst[i].b = temp.b;
+		dst[i].a = temp.a;
+	}
+}

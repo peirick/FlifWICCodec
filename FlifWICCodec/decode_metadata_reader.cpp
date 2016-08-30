@@ -1,8 +1,8 @@
 #include "decode_metadata_reader.h"
 #include "uuid.h"
 
-DecodeMetadataQueryReader::DecodeMetadataQueryReader(UINT width, UINT height)
-	: width_(width), height_(height)
+DecodeMetadataQueryReader::DecodeMetadataQueryReader(UINT width, UINT height, UINT frame_delay)
+	: width_(width), height_(height), frame_delay_(frame_delay)
 {
 
 }
@@ -14,9 +14,9 @@ DecodeMetadataQueryReader::~DecodeMetadataQueryReader()
 HRESULT DecodeMetadataQueryReader::QueryInterface(REFIID riid, void ** ppvObject)
 {
 	TRACE2("(%s, %p)\n", debugstr_guid(riid), ppvObject);
-	if (ppvObject == NULL)
+	if (ppvObject == nullptr)
 		return E_INVALIDARG;
-	*ppvObject = NULL;
+	*ppvObject = nullptr;
 
 	if (!IsEqualGUID(riid, IID_IUnknown) &&
 		!IsEqualGUID(riid, IID_IWICMetadataQueryReader))
@@ -36,10 +36,10 @@ HRESULT DecodeMetadataQueryReader::GetLocation(UINT cchMaxLength, WCHAR * wzName
 HRESULT DecodeMetadataQueryReader::GetMetadataByName(LPCWSTR wzName, PROPVARIANT * pvarValue)
 {
 	TRACE2("(%p, %p)\n", wzName, pvarValue);
-	if (wzName == NULL)
+	if (wzName == nullptr)
 		return E_INVALIDARG;
 
-	if (pvarValue == NULL)
+	if (pvarValue == nullptr)
 		return E_INVALIDARG;
 
 	// Fake Gif Information
@@ -100,6 +100,13 @@ HRESULT DecodeMetadataQueryReader::GetMetadataByName(LPCWSTR wzName, PROPVARIANT
 		pvarValue->vt = VT_UI1;
 		return S_OK;
 	}
+	else if (_wcsicmp(L"/grctlext/Delay", wzName) == 0)
+	{
+		// Delay in 10th ms
+		pvarValue->uiVal = frame_delay_ / 10;
+		pvarValue->vt = VT_UI2;
+		return S_OK;
+	}
 	return WINCODEC_ERR_PROPERTYNOTFOUND;
 }
 
@@ -112,7 +119,7 @@ HRESULT DecodeMetadataQueryReader::GetEnumerator(IEnumString ** ppIEnumString)
 HRESULT DecodeMetadataQueryReader::GetContainerFormat(GUID * pguidContainerFormat)
 {
 	TRACE1("(%p)\n", pguidContainerFormat);
-	if (pguidContainerFormat == NULL)
+	if (pguidContainerFormat == nullptr)
 		return E_INVALIDARG;
 	*pguidContainerFormat = GUID_ContainerFormatFLIF;
 	return S_OK;

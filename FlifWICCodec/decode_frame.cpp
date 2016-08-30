@@ -20,24 +20,13 @@ DecodeFrame::~DecodeFrame()
 {
 }
 
-HRESULT DecodeFrame::CreateFromFLIFImage(FLIF_IMAGE* image, ComPtr<DecodeFrame>& ppOutput)
-{
-	TRACE1("(%p)\n", image);
-	ComPtr<DecodeFrame> output;
-	output.reset(new (std::nothrow) DecodeFrame(image));
-	if (output.get() == NULL)
-		return E_OUTOFMEMORY;
-
-	ppOutput.reset(output.new_ref());
-	return S_OK;
-}
 
 HRESULT DecodeFrame::QueryInterface(REFIID riid, void **ppvObject) {
 	TRACE2("(%s, %p)\n", debugstr_guid(riid), ppvObject);
 
-	if (ppvObject == NULL)
+	if (ppvObject == nullptr)
 		return E_INVALIDARG;
-	*ppvObject = NULL;
+	*ppvObject = nullptr;
 
 	if (!IsEqualGUID(riid, IID_IUnknown) &&
 		!IsEqualGUID(riid, IID_IWICBitmapFrameDecode) &&
@@ -50,7 +39,7 @@ HRESULT DecodeFrame::QueryInterface(REFIID riid, void **ppvObject) {
 
 HRESULT DecodeFrame::GetSize(UINT *puiWidth, UINT *puiHeight) {
 	TRACE2("(%p, %p)\n", puiWidth, puiHeight);
-	if (puiWidth == NULL || puiHeight == NULL)
+	if (puiWidth == nullptr || puiHeight == nullptr)
 		return E_INVALIDARG;
 	*puiWidth = flif_image_get_width(image_);
 	*puiHeight = flif_image_get_height(image_);
@@ -60,7 +49,7 @@ HRESULT DecodeFrame::GetSize(UINT *puiWidth, UINT *puiHeight) {
 
 HRESULT DecodeFrame::GetPixelFormat(WICPixelFormatGUID *pPixelFormat) {
 	TRACE1("(%p)\n", pPixelFormat);
-	if (pPixelFormat == NULL)
+	if (pPixelFormat == nullptr)
 		return E_INVALIDARG;
 	uint8_t nb_channels = flif_image_get_nb_channels(image_);
 	if (nb_channels >= 4) {
@@ -77,6 +66,10 @@ HRESULT DecodeFrame::GetPixelFormat(WICPixelFormatGUID *pPixelFormat) {
 
 HRESULT DecodeFrame::GetResolution(double *pDpiX, double *pDpiY) {
 	TRACE2("(%p, %p)\n", pDpiX, pDpiY);
+	if (pDpiX == nullptr)
+		return E_INVALIDARG;
+	if (pDpiY == nullptr)
+		return E_INVALIDARG;
 	// Let's assume square pixels. 96dpi seems to be a reasonable default.
 	*pDpiX = 96;
 	*pDpiY = 96;
@@ -90,7 +83,7 @@ HRESULT DecodeFrame::CopyPalette(IWICPalette *pIPalette) {
 
 HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBufferSize, BYTE *pbBuffer) {
 	TRACE4("(%p, %u, %u, %p)\n", prc, cbStride, cbBufferSize, pbBuffer);
-	if (pbBuffer == NULL)
+	if (pbBuffer == nullptr)
 		return E_INVALIDARG;
 	uint32_t image_width = flif_image_get_width(image_);
 	uint32_t image_height = flif_image_get_height(image_);
@@ -134,17 +127,18 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
 
 HRESULT DecodeFrame::GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadataQueryReader) {
 	TRACE1("(%p)\n", ppIMetadataQueryReader);
-	if (ppIMetadataQueryReader == NULL)
+	if (ppIMetadataQueryReader == nullptr)
 		return E_INVALIDARG;
 	uint32_t image_width = flif_image_get_width(image_);
 	uint32_t image_height = flif_image_get_height(image_);
-	*ppIMetadataQueryReader = new DecodeMetadataQueryReader(image_width, image_height);
+	uint32_t frame_delay = flif_image_get_frame_delay(image_);
+	*ppIMetadataQueryReader = new DecodeMetadataQueryReader(image_width, image_height, frame_delay);
 	return S_OK;
 }
 
 HRESULT DecodeFrame::GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) {
 	TRACE3("(%d, %p, %p)\n", cCount, ppIColorContexts, pcActualCount);
-	if (pcActualCount == NULL)
+	if (pcActualCount == nullptr)
 		return E_INVALIDARG;
 	*pcActualCount = 0;
 	return S_OK;

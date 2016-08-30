@@ -17,9 +17,9 @@ HRESULT EncodeFrame::QueryInterface(REFIID riid, void ** ppvObject)
 {
 	TRACE2("(%s, %p)\n", debugstr_guid(riid), ppvObject);
 
-	if (ppvObject == NULL)
+	if (ppvObject == nullptr)
 		return E_INVALIDARG;
-	*ppvObject = NULL;
+	*ppvObject = nullptr;
 
 	if (!IsEqualGUID(riid, IID_IUnknown) &&
 		!IsEqualGUID(riid, IID_IWICBitmapFrameEncode))
@@ -50,7 +50,7 @@ HRESULT EncodeFrame::SetResolution(double dpiX, double dpiY)
 HRESULT EncodeFrame::SetPixelFormat(WICPixelFormatGUID * pPixelFormat)
 {
 	TRACE1("(%p)\n", pPixelFormat);
-	if (pPixelFormat == NULL)
+	if (pPixelFormat == nullptr)
 		return E_INVALIDARG;
 
 	//supported nativly
@@ -111,7 +111,7 @@ HRESULT EncodeFrame::WritePixels(UINT lineCount, UINT cbStride, UINT cbBufferSiz
 HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc)
 {
 	TRACE2("(%p, %p)\n", pIBitmapSource, prc);
-	if (pIBitmapSource == NULL)
+	if (pIBitmapSource == nullptr)
 		return E_INVALIDARG;
 
 	HRESULT result = S_OK;
@@ -149,7 +149,8 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 
 			if (SUCCEEDED(metadataReader->GetMetadataByName(L"/grctlext/Delay", &propValue))) {
 				if (propValue.vt == VT_UI2) {
-					animation_information.Delay = propValue.uiVal;
+					// From 10th ms to ms
+					animation_information.Delay = propValue.uiVal * 10;
 				}
 			}
 			PropVariantClear(&propValue);
@@ -193,7 +194,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 	{
 		//Create factory
 		ComPtr<IWICImagingFactory> factory;
-		result = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
+		result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
 		if (FAILED(result)) {
 			return result;
 		}
@@ -318,7 +319,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
 	{
 		return WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT;
 	}
-	if (frame->Buffer == NULL)
+	if (frame->Buffer == nullptr)
 	{
 		delete frame;
 		return E_OUTOFMEMORY;
@@ -346,8 +347,8 @@ HRESULT EncodeFrame::Commit(void)
 HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetadataQueryWriter)
 {
 	TRACE1("(%p)\n", ppIMetadataQueryWriter);
-	if (ppIMetadataQueryWriter == NULL)
+	if (ppIMetadataQueryWriter == nullptr)
 		return E_INVALIDARG;
-	*ppIMetadataQueryWriter = NULL;
+	*ppIMetadataQueryWriter = nullptr;
 	return S_OK;
 }

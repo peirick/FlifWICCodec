@@ -8,28 +8,25 @@ class DecodeFrame : public ComObjectBase<IWICBitmapFrameDecode> {
 public:
 	explicit DecodeFrame(FLIF_IMAGE* image);
 	~DecodeFrame();
-	
-	static HRESULT DecodeFrame::CreateFromFLIFImage(FLIF_IMAGE* image, ComPtr<DecodeFrame>& ppOutput);
-
 	// IUnknown:
-	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
-	ULONG STDMETHODCALLTYPE AddRef() { return ComObjectBase::AddRef(); }
-	ULONG STDMETHODCALLTYPE Release() { return ComObjectBase::Release(); }
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override;
+	ULONG STDMETHODCALLTYPE AddRef() override { return ComObjectBase::AddRef(); }
+	ULONG STDMETHODCALLTYPE Release() override { return ComObjectBase::Release(); }
 	// IWICBitmapSource:
-	virtual HRESULT STDMETHODCALLTYPE GetSize(UINT *puiWidth, UINT *puiHeight);
-	virtual HRESULT STDMETHODCALLTYPE GetPixelFormat(WICPixelFormatGUID *pPixelFormat);
-	virtual HRESULT STDMETHODCALLTYPE GetResolution(double *pDpiX, double *pDpiY);
-	virtual HRESULT STDMETHODCALLTYPE CopyPalette(IWICPalette *pIPalette);
-	virtual HRESULT STDMETHODCALLTYPE CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBufferSize, BYTE *pbBuffer);
+	HRESULT STDMETHODCALLTYPE GetSize(UINT *puiWidth, UINT *puiHeight) override;
+	HRESULT STDMETHODCALLTYPE GetPixelFormat(WICPixelFormatGUID *pPixelFormat) override;
+	HRESULT STDMETHODCALLTYPE GetResolution(double *pDpiX, double *pDpiY) override;
+	HRESULT STDMETHODCALLTYPE CopyPalette(IWICPalette *pIPalette) override;
+	HRESULT STDMETHODCALLTYPE CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBufferSize, BYTE *pbBuffer) override;
 	// IWICBitmapFrameDecode:
-	virtual HRESULT STDMETHODCALLTYPE GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadataQueryReader);
-	virtual HRESULT STDMETHODCALLTYPE GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount);
-	virtual HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail);
+	HRESULT STDMETHODCALLTYPE GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadataQueryReader) override;
+	HRESULT STDMETHODCALLTYPE GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) override;
+	HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail) override;
 private:
 	// No copy and assign.
 	DecodeFrame(const DecodeFrame&) = delete;
 	void operator=(const DecodeFrame&) = delete;
 
-	FLIF_IMAGE* image_;
+	FLIF_IMAGE*				   image_;
 	ComPtr<IWICImagingFactory> factory_;
 };

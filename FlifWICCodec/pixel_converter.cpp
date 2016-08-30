@@ -6,7 +6,7 @@ struct RGBA {
 };
 #pragma pack(pop)
 
-void CopyRGBA8ToRGBA8Row(size_t width, void* sourceRow, void* destRow) {
+void CopyAllButTransparentPixelRGBA8(size_t width, void* sourceRow, void* destRow) {
 	RGBA* src = (RGBA*)sourceRow;
 	RGBA* dst = (RGBA*)destRow;
 	for (size_t i = 0; i < width; ++i) {

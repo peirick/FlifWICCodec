@@ -27,9 +27,9 @@ HRESULT EncodeContainer::QueryInterface(REFIID riid, void ** ppvObject)
 {
 	TRACE2("(%s, %p)\n", debugstr_guid(riid), ppvObject);
 
-	if (ppvObject == NULL)
+	if (ppvObject == nullptr)
 		return E_INVALIDARG;
-	*ppvObject = NULL;
+	*ppvObject = nullptr;
 
 	if (!IsEqualGUID(riid, IID_IUnknown) && !IsEqualGUID(riid, IID_IWICBitmapEncoder))
 		return E_NOINTERFACE;
@@ -41,7 +41,7 @@ HRESULT EncodeContainer::QueryInterface(REFIID riid, void ** ppvObject)
 HRESULT EncodeContainer::Initialize(IStream * pIStream, WICBitmapEncoderCacheOption cacheOptions)
 {
 	TRACE2("(%p, %x)\n", pIStream, cacheOptions);
-	if (pIStream == NULL)
+	if (pIStream == nullptr)
 		return E_INVALIDARG;
 	pIStream_ = pIStream;
 
@@ -64,7 +64,7 @@ HRESULT EncodeContainer::Initialize(IStream * pIStream, WICBitmapEncoderCacheOpt
 HRESULT EncodeContainer::GetContainerFormat(GUID * pguidContainerFormat)
 {
 	TRACE1("(%p)\n", pguidContainerFormat);
-	if (pguidContainerFormat == NULL)
+	if (pguidContainerFormat == nullptr)
 		return E_INVALIDARG;
 	*pguidContainerFormat = GUID_ContainerFormatFLIF;
 	return S_OK;
@@ -78,8 +78,8 @@ HRESULT EncodeContainer::GetEncoderInfo(IWICBitmapEncoderInfo ** ppIEncoderInfo)
 
 	{
 		SectionLock l(&cs_);
-		if (factory_.get() == NULL) {
-			result = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory_.get_out_storage());
+		if (factory_.get() == nullptr) {
+			result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory_.get_out_storage());
 			if (FAILED(result))
 				return result;
 		}
@@ -125,7 +125,7 @@ HRESULT EncodeContainer::SetPreview(IWICBitmapSource * pIPreview)
 HRESULT EncodeContainer::CreateNewFrame(IWICBitmapFrameEncode ** ppIFrameEncode, IPropertyBag2 ** ppIEncoderOptions)
 {
 	TRACE2("(%p, %p)\n", ppIFrameEncode, ppIEncoderOptions);
-	if (ppIFrameEncode == NULL)
+	if (ppIFrameEncode == nullptr)
 		return E_INVALIDARG;
 
 	if (encoder_ == nullptr) {
@@ -166,12 +166,12 @@ HRESULT EncodeContainer::Commit(void)
 HRESULT EncodeContainer::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetadataQueryWriter)
 {
 	TRACE1("(%p)\n", ppIMetadataQueryWriter);
-	if (ppIMetadataQueryWriter == NULL)
+	if (ppIMetadataQueryWriter == nullptr)
 		return E_INVALIDARG;
 	return E_NOTIMPL;
 }
 
-HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animationInformation)
+HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animation_information)
 {
 	if (encoder_ == nullptr) {
 		return WINCODEC_ERR_NOTINITIALIZED;
@@ -184,14 +184,14 @@ HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animatio
 			return WINCODEC_ERR_INTERNALERROR;
 		}
 
-		if (animationInformation.TransparencyFlag && frame->NumberComponents == 4) {
+		if (animation_information.TransparencyFlag && frame->NumberComponents == 4) {
 			//Must be RGBA and Alpha channel has only values 0 or FF
 			assert(frame->NumberComponents == 4);
 			for (UINT i = 0; i < frame->Height; ++i) {
 				BYTE* srcrow = frame->Buffer + i * frame->Stride;
-				BYTE* destrow = current_frame_->Buffer + (i + animationInformation.Top) * current_frame_->Stride;
-				BYTE* destrowstart = destrow + animationInformation.Left * current_frame_->NumberComponents;
-				CopyRGBA8ToRGBA8Row(frame->Width, srcrow, destrowstart);
+				BYTE* destrow = current_frame_->Buffer + (i + animation_information.Top) * current_frame_->Stride;
+				BYTE* destrowstart = destrow + animation_information.Left * current_frame_->NumberComponents;
+				CopyAllButTransparentPixelRGBA8(frame->Width, srcrow, destrowstart);
 			}
 		}
 		else {
@@ -199,8 +199,8 @@ HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animatio
 			assert(frame->NumberComponents < 4);
 			for (UINT i = 0; i < frame->Height; ++i) {
 				BYTE* srcrow = frame->Buffer + i * frame->Stride;
-				BYTE* destrow = current_frame_->Buffer + (i + animationInformation.Top) * current_frame_->Stride;
-				BYTE* destrowstart = destrow + animationInformation.Left * current_frame_->NumberComponents;
+				BYTE* destrow = current_frame_->Buffer + (i + animation_information.Top) * current_frame_->Stride;
+				BYTE* destrowstart = destrow + animation_information.Left * current_frame_->NumberComponents;
 				memcpy(destrowstart, srcrow, frame->Width*frame->NumberComponents);
 			}
 		}
@@ -213,6 +213,9 @@ HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animatio
 
 	//Write and encode rows
 	FLIF_IMAGE* image = flif_create_image(current_frame_->Width, current_frame_->Height, current_frame_->NumberComponents);
+	if (animation_information.Delay > 0) {
+		flif_image_set_frame_delay(image, animation_information.Delay);
+	}
 	for (UINT i = 0; i < current_frame_->Height; ++i) {
 		BYTE* row = current_frame_->Buffer + i * current_frame_->Stride;
 		flif_image_write_row_N(image, i, row, current_frame_->Stride);

@@ -24,11 +24,12 @@ DecodeContainer::~DecodeContainer()
 HRESULT DecodeContainer::QueryInterface(REFIID riid, void** ppvObject) {
 	TRACE2("(%s, %p)\n", debugstr_guid(riid), ppvObject);
 
-	if (ppvObject == NULL)
+	if (ppvObject == nullptr)
 		return E_INVALIDARG;
-	*ppvObject = NULL;
+	*ppvObject = nullptr;
 
-	if (!IsEqualGUID(riid, IID_IUnknown) && !IsEqualGUID(riid, IID_IWICBitmapDecoder))
+	if (!IsEqualGUID(riid, IID_IUnknown) &&
+		!IsEqualGUID(riid, IID_IWICBitmapDecoder))
 		return E_NOINTERFACE;
 	this->AddRef();
 	*ppvObject = static_cast<IWICBitmapDecoder*>(this);
@@ -57,20 +58,19 @@ HRESULT IsValidFLIF(IStream* pIStream) {
 	// reset pIStream
 	LARGE_INTEGER offset;
 	offset.QuadPart = -kHeaderSize;
-	ret = pIStream->Seek(offset, STREAM_SEEK_CUR, NULL);
+	ret = pIStream->Seek(offset, STREAM_SEEK_CUR, nullptr);
 	return ret;
 }
 
 HRESULT DecodeContainer::QueryCapability(IStream* pIStream, DWORD* pdwCapability) {
 	TRACE2("(%p, %x)\n", pIStream, pdwCapability);
-	if (pdwCapability == NULL)
+	if (pdwCapability == nullptr)
 		return E_INVALIDARG;
 
 	HRESULT ret = IsValidFLIF(pIStream);
 	if (ret == WINCODEC_ERR_BADHEADER)
 		return WINCODEC_ERR_WRONGSTATE;  // That's what Win7 jpeg codec returns.
 	if (ret == S_OK)
-		// TODO: should we check if we really can decode the VP8 bitstream?
 		*pdwCapability = WICBitmapDecoderCapabilityCanDecodeSomeImages;
 	return ret;
 }
@@ -78,7 +78,7 @@ HRESULT DecodeContainer::QueryCapability(IStream* pIStream, DWORD* pdwCapability
 HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOptions) {
 	TRACE2("(%p, %x)\n", pIStream, cacheOptions);
 
-	if (pIStream == NULL)
+	if (pIStream == nullptr)
 		return E_INVALIDARG;
 
 	HRESULT ret;
@@ -99,7 +99,7 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
 	scoped_buffer file_data(stream_size);
 	LARGE_INTEGER zero;
 	zero.QuadPart = 0;
-	pIStream->Seek(zero, STREAM_SEEK_SET, NULL);
+	pIStream->Seek(zero, STREAM_SEEK_SET, nullptr);
 	ret = pIStream->Read(file_data.get(), stream_size, &bytes_read);
 	TRACE1("bytes_read %d\n", bytes_read);
 	if (FAILED(ret)) {
@@ -116,14 +116,19 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
 		decoder_ = nullptr;
 	}
 	decoder_ = flif_create_decoder();
-
 	if (flif_decoder_decode_memory(decoder_, file_data.get(), bytes_read) != 0)
 	{
 		size_t num_images = flif_decoder_num_images(decoder_);
 		frames_.resize(num_images);
 		for (int i = 0; i < num_images; ++i) {
 			FLIF_IMAGE* image = flif_decoder_get_image(decoder_, i);
-			DecodeFrame::CreateFromFLIFImage(image, frames_[i]);
+
+			ComPtr<DecodeFrame> frame;
+			frame.reset(new (std::nothrow) DecodeFrame(image));
+			if (frame.get() == nullptr)
+				return E_OUTOFMEMORY;
+
+			frames_[i].reset(frame.new_ref());
 		}
 	}
 	else {
@@ -138,7 +143,7 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
 
 HRESULT DecodeContainer::GetContainerFormat(GUID* pguidContainerFormat) {
 	TRACE1("(%p)\n", pguidContainerFormat);
-	if (pguidContainerFormat == NULL)
+	if (pguidContainerFormat == nullptr)
 		return E_INVALIDARG;
 	*pguidContainerFormat = GUID_ContainerFormatFLIF;
 	return S_OK;
@@ -151,8 +156,8 @@ HRESULT DecodeContainer::GetDecoderInfo(IWICBitmapDecoderInfo** ppIDecoderInfo) 
 
 	{
 		SectionLock l(&cs_);
-		if (factory_.get() == NULL) {
-			result = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory_.get_out_storage());
+		if (factory_.get() == nullptr) {
+			result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory_.get_out_storage());
 			if (FAILED(result))
 				return result;
 		}
@@ -178,18 +183,12 @@ HRESULT DecodeContainer::CopyPalette(IWICPalette* pIPalette) {
 
 HRESULT DecodeContainer::GetMetadataQueryReader(IWICMetadataQueryReader** ppIMetadataQueryReader) {
 	TRACE1("(%p)\n", ppIMetadataQueryReader);
-	if (ppIMetadataQueryReader == NULL)
+	if (ppIMetadataQueryReader == nullptr)
 		return E_INVALIDARG;
 	if (frames_.size() == 0)
 		return WINCODEC_ERR_NOTINITIALIZED;
 
-	UINT width;
-	UINT height;
-	HRESULT result = frames_[0].get()->GetSize(&width, &height);
-	if (FAILED(result))
-		return result;
-	*ppIMetadataQueryReader = new DecodeMetadataQueryReader(width, height);
-	return S_OK;
+	return frames_[0].get()->GetMetadataQueryReader(ppIMetadataQueryReader);
 }
 
 HRESULT DecodeContainer::GetPreview(IWICBitmapSource** ppIBitmapSource) {
@@ -210,7 +209,7 @@ HRESULT DecodeContainer::GetThumbnail(IWICBitmapSource** ppIThumbnail)
 
 HRESULT DecodeContainer::GetFrameCount(UINT* pCount) {
 	TRACE1("(%p)\n", pCount);
-	if (pCount == NULL)
+	if (pCount == nullptr)
 		return E_INVALIDARG;
 	if (decoder_ == nullptr) {
 		return WINCODEC_ERR_NOTINITIALIZED;
@@ -221,7 +220,7 @@ HRESULT DecodeContainer::GetFrameCount(UINT* pCount) {
 
 HRESULT DecodeContainer::GetFrame(UINT index, IWICBitmapFrameDecode** ppIBitmapFrame) {
 	TRACE2("(%d, %p)\n", index, ppIBitmapFrame);
-	if (ppIBitmapFrame == NULL)
+	if (ppIBitmapFrame == nullptr)
 		return E_INVALIDARG;
 
 	if (decoder_ == nullptr) {

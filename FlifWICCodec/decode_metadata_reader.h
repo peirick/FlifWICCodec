@@ -4,7 +4,7 @@
 
 class DecodeMetadataQueryReader : public ComObjectBase<IWICMetadataQueryReader> {
 public:
-	DecodeMetadataQueryReader(UINT width, UINT height);
+	DecodeMetadataQueryReader(UINT width, UINT height, UINT frame_delay);
 	~DecodeMetadataQueryReader();
 	// Inherited via IUnknown:
 	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override;
@@ -18,4 +18,5 @@ public:
 private:
 	UINT width_;
 	UINT height_;
+	UINT frame_delay_;
 };

@@ -30,11 +30,8 @@ private:
 	// No copy and assign.
 	DecodeContainer(const DecodeContainer&) = delete;
 	void operator=(const DecodeContainer&) = delete;
-
 	FLIF_DECODER* decoder_;
 	std::deque<ComPtr<DecodeFrame>> frames_;
 	ComPtr<IWICImagingFactory> factory_;
 	CRITICAL_SECTION cs_;
-
-
 };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wincodec.h>
-#include <library/flif_dec.h>
+#include <flif.h>
 #include "utils.h"
 
 class DecodeFrame : public ComObjectBase<IWICBitmapFrameDecode> {

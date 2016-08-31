@@ -51,16 +51,16 @@ HRESULT DecodeFrame::GetPixelFormat(WICPixelFormatGUID *pPixelFormat) {
 	TRACE1("(%p)\n", pPixelFormat);
 	if (pPixelFormat == nullptr)
 		return E_INVALIDARG;
-	uint8_t nb_channels = flif_image_get_nb_channels(image_);
-	if (nb_channels >= 4) {
-		*pPixelFormat = GUID_WICPixelFormat32bppRGBA;
-	}
-	else if (nb_channels == 3) {
-		*pPixelFormat = GUID_WICPixelFormat24bppRGB;
-	}
-	else if (nb_channels == 1) {
-		*pPixelFormat = GUID_WICPixelFormat8bppGray;
-	}
+	//uint8_t nb_channels = flif_image_get_nb_channels(image_);
+	//if (nb_channels >= 4) {
+	*pPixelFormat = GUID_WICPixelFormat32bppRGBA;
+	//}
+	//else if (nb_channels == 3) {
+	//	*pPixelFormat = GUID_WICPixelFormat24bppRGB;
+	//}
+	//else if (nb_channels == 1) {
+	//	*pPixelFormat = GUID_WICPixelFormat8bppGray;
+	//}
 	return S_OK;
 }
 
@@ -87,7 +87,7 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
 		return E_INVALIDARG;
 	uint32_t image_width = flif_image_get_width(image_);
 	uint32_t image_height = flif_image_get_height(image_);
-	uint8_t nb_channels = flif_image_get_nb_channels(image_);
+	uint8_t nb_channels = 4; // flif_image_get_nb_channels(image_);
 
 	WICRect rect = { 0, 0, image_width, image_height };
 	if (prc)
@@ -108,7 +108,7 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
 		return S_OK;
 
 	size_t buffer_size = image_width*nb_channels;
-	scoped_buffer temp_row(image_width*nb_channels);
+	scoped_buffer temp_row(buffer_size);
 	if (temp_row.alloc_failed()) {
 		return WINCODEC_ERR_OUTOFMEMORY;
 	}
@@ -118,7 +118,7 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
 	const int width = rect.Width * nb_channels;
 
 	for (int src_y = rect.Y; src_y < rect.Y + rect.Height; ++src_y) {
-		flif_image_read_row_N(image_, src_y, temp_row.get(), buffer_size);
+		flif_image_read_row_RGBA8(image_, src_y, temp_row.get(), buffer_size);
 		memcpy(dst_buffer, temp_row.get() + x_offset, width);
 		dst_buffer += cbStride;
 	}

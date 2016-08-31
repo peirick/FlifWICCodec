@@ -1,4 +1,3 @@
-#include <library/flif_enc.h>
 #include "encode_frame.h"
 #include "pixel_converter.h"
 

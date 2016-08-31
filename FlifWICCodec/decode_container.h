@@ -2,7 +2,7 @@
 
 #include <wincodec.h>
 #include <deque>
-#include <library/flif_dec.h>
+#include <flif.h>
 #include "decode_frame.h"
 #include "utils.h"
 

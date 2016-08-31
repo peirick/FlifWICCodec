@@ -212,13 +212,22 @@ HRESULT EncodeContainer::AddImage(RawFrame* frame, AnimationInformation animatio
 	}
 
 	//Write and encode rows
-	FLIF_IMAGE* image = flif_create_image(current_frame_->Width, current_frame_->Height, current_frame_->NumberComponents);
+	FLIF_IMAGE* image = nullptr;
+	if (current_frame_->NumberComponents == 1) {
+		image = flif_import_image_GRAY(current_frame_->Width, current_frame_->Height, current_frame_->Buffer, current_frame_->Stride);
+	}
+	else if (current_frame_->NumberComponents == 3) {
+		image = flif_import_image_RGB(current_frame_->Width, current_frame_->Height, current_frame_->Buffer, current_frame_->Stride);
+	}
+	else if (current_frame_->NumberComponents == 4) {
+		image = flif_import_image_RGBA(current_frame_->Width, current_frame_->Height, current_frame_->Buffer, current_frame_->Stride);
+	}
+
+	if (image == nullptr)
+		return WINCODEC_ERR_INTERNALERROR;
+
 	if (animation_information.Delay > 0) {
 		flif_image_set_frame_delay(image, animation_information.Delay);
-	}
-	for (UINT i = 0; i < current_frame_->Height; ++i) {
-		BYTE* row = current_frame_->Buffer + i * current_frame_->Stride;
-		flif_image_write_row_N(image, i, row, current_frame_->Stride);
 	}
 	flif_encoder_add_image(encoder_, image);
 	flif_destroy_image(image);

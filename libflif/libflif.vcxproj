@@ -19,78 +19,114 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="image\color_range.cpp" />
-    <ClCompile Include="image\crc32k.cpp" />
-    <ClCompile Include="library\flif-interface.cpp" />
-    <ClCompile Include="library\flif-interface_common.cpp" />
-    <ClCompile Include="library\flif-interface_dec.cpp" />
-    <ClCompile Include="library\flif-interface_enc.cpp" />
-    <ClCompile Include="common.cpp" />
-    <ClCompile Include="flif-dec.cpp" />
-    <ClCompile Include="flif-enc.cpp" />
-    <ClCompile Include="image\image-pam.cpp" />
-    <ClCompile Include="image\image-png.cpp" />
-    <ClCompile Include="image\image-pnm.cpp" />
-    <ClCompile Include="image\image-rggb.cpp" />
-    <ClCompile Include="image\image.cpp" />
-    <ClCompile Include="io.cpp" />
-    <ClCompile Include="maniac\bit.cpp" />
-    <ClCompile Include="maniac\chance.cpp" />
-    <ClCompile Include="maniac\symbol.cpp" />
-    <ClCompile Include="transform\factory.cpp" />
+    <ClInclude Include="..\FLIF\extern\lodepng.h" />
+    <ClInclude Include="..\FLIF\extern\stb_image.h" />
+    <ClInclude Include="..\FLIF\extern\stb_image_write.h" />
+    <ClInclude Include="..\FLIF\src\common.hpp" />
+    <ClInclude Include="..\FLIF\src\compiler-specific.hpp" />
+    <ClInclude Include="..\FLIF\src\config.h" />
+    <ClInclude Include="..\FLIF\src\fileio.hpp" />
+    <ClInclude Include="..\FLIF\src\flif-dec.hpp" />
+    <ClInclude Include="..\FLIF\src\flif-enc.hpp" />
+    <ClInclude Include="..\FLIF\src\flif_config.h" />
+    <ClInclude Include="..\FLIF\src\image\color_range.hpp" />
+    <ClInclude Include="..\FLIF\src\image\crc32k.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image-metadata.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image-pam.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image-png-metadata.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image-png.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image-pnm.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image-rggb.hpp" />
+    <ClInclude Include="..\FLIF\src\image\image.hpp" />
+    <ClInclude Include="..\FLIF\src\io.hpp" />
+    <ClInclude Include="..\FLIF\src\library\flif-interface-private.hpp" />
+    <ClInclude Include="..\FLIF\src\library\flif-interface-private_common.hpp" />
+    <ClInclude Include="..\FLIF\src\library\flif-interface-private_dec.hpp" />
+    <ClInclude Include="..\FLIF\src\library\flif-interface-private_enc.hpp" />
+    <ClInclude Include="..\FLIF\src\library\flif.h" />
+    <ClInclude Include="..\FLIF\src\library\flif_common.h" />
+    <ClInclude Include="..\FLIF\src\library\flif_dec.h" />
+    <ClInclude Include="..\FLIF\src\library\flif_enc.h" />
+    <ClInclude Include="..\FLIF\src\maniac\bit.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\chance.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\compound.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\compound_enc.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\rac.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\rac_enc.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\symbol.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\symbol_enc.hpp" />
+    <ClInclude Include="..\FLIF\src\maniac\util.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\bounds.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\colorbuckets.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\factory.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\framecombine.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\framedup.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\frameshape.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\palette.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\palette_A.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\palette_C.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\permute.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\transform.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\yc1c2.hpp" />
+    <ClInclude Include="..\FLIF\src\transform\ycocg.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="compiler-specific.hpp" />
-    <ClInclude Include="config.h" />
-    <ClInclude Include="flif_config.h" />
-    <ClInclude Include="image\color_range.hpp" />
-    <ClInclude Include="image\crc32k.hpp" />
-    <ClInclude Include="library\flif-interface-private.hpp" />
-    <ClInclude Include="library\flif-interface-private_common.hpp" />
-    <ClInclude Include="library\flif-interface-private_dec.hpp" />
-    <ClInclude Include="library\flif-interface-private_enc.hpp" />
-    <ClInclude Include="library\flif.h" />
-    <ClInclude Include="library\flif_common.h" />
-    <ClInclude Include="library\flif_dec.h" />
-    <ClInclude Include="library\flif_enc.h" />
-    <ClInclude Include="common.hpp" />
-    <ClInclude Include="fileio.hpp" />
-    <ClInclude Include="flif-dec.hpp" />
-    <ClInclude Include="flif-enc.hpp" />
-    <ClInclude Include="image\image-pam.hpp" />
-    <ClInclude Include="image\image-png.hpp" />
-    <ClInclude Include="image\image-pnm.hpp" />
-    <ClInclude Include="image\image-rggb.hpp" />
-    <ClInclude Include="image\image.hpp" />
-    <ClInclude Include="io.hpp" />
-    <ClInclude Include="maniac\bit.hpp" />
-    <ClInclude Include="maniac\chance.hpp" />
-    <ClInclude Include="maniac\compound.hpp" />
-    <ClInclude Include="maniac\compound_enc.hpp" />
-    <ClInclude Include="maniac\rac.hpp" />
-    <ClInclude Include="maniac\rac_enc.hpp" />
-    <ClInclude Include="maniac\symbol.hpp" />
-    <ClInclude Include="maniac\symbol_enc.hpp" />
-    <ClInclude Include="maniac\util.hpp" />
-    <ClInclude Include="transform\bounds.hpp" />
-    <ClInclude Include="transform\colorbuckets.hpp" />
-    <ClInclude Include="transform\factory.hpp" />
-    <ClInclude Include="transform\framecombine.hpp" />
-    <ClInclude Include="transform\framedup.hpp" />
-    <ClInclude Include="transform\frameshape.hpp" />
-    <ClInclude Include="transform\palette.hpp" />
-    <ClInclude Include="transform\palette_A.hpp" />
-    <ClInclude Include="transform\palette_C.hpp" />
-    <ClInclude Include="transform\permute.hpp" />
-    <ClInclude Include="transform\transform.hpp" />
-    <ClInclude Include="transform\yc1c2.hpp" />
-    <ClInclude Include="transform\ycocg.hpp" />
+    <ClCompile Include="..\FLIF\extern\lodepng.cpp" />
+    <ClCompile Include="..\FLIF\src\common.cpp" />
+    <ClCompile Include="..\FLIF\src\flif-dec.cpp" />
+    <ClCompile Include="..\FLIF\src\flif-enc.cpp" />
+    <ClCompile Include="..\FLIF\src\image\color_range.cpp" />
+    <ClCompile Include="..\FLIF\src\image\crc32k.cpp" />
+    <ClCompile Include="..\FLIF\src\image\image-metadata.cpp" />
+    <ClCompile Include="..\FLIF\src\image\image-pam.cpp" />
+    <ClCompile Include="..\FLIF\src\image\image-png.cpp" />
+    <ClCompile Include="..\FLIF\src\image\image-pnm.cpp" />
+    <ClCompile Include="..\FLIF\src\image\image-rggb.cpp" />
+    <ClCompile Include="..\FLIF\src\image\image.cpp" />
+    <ClCompile Include="..\FLIF\src\io.cpp" />
+    <ClCompile Include="..\FLIF\src\library\flif-interface.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\FLIF\src\library\flif-interface_common.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\FLIF\src\library\flif-interface_dec.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</CompileAs>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\FLIF\src\library\flif-interface_enc.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</CompileAs>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\FLIF\src\maniac\bit.cpp" />
+    <ClCompile Include="..\FLIF\src\maniac\chance.cpp" />
+    <ClCompile Include="..\FLIF\src\maniac\symbol.cpp" />
+    <ClCompile Include="..\FLIF\src\transform\factory.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{56871ADF-ABF5-414B-8872-BCF0E200B95D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>libflif</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>FLIF</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -164,6 +200,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -206,6 +243,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

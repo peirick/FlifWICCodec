@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wincodec.h>
+#include <flif.h>
 #include "utils.h"
 #include "encode_container.h"
 

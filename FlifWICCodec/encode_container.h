@@ -2,7 +2,7 @@
 
 #include <wincodec.h>
 #include <deque>
-#include <library/flif_enc.h>
+#include <flif.h>
 #include "utils.h"
 
 struct AnimationInformation {

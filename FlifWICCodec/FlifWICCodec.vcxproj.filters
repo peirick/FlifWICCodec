@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="extern">
-      <UniqueIdentifier>{ac04c714-5647-4eeb-acbe-ada6ee6fbf04}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -66,12 +63,6 @@
     </ClInclude>
     <ClInclude Include="stopwatch.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\extern\stb_image.h">
-      <Filter>extern</Filter>
-    </ClInclude>
-    <ClInclude Include="..\extern\stb_image_write.h">
-      <Filter>extern</Filter>
     </ClInclude>
     <ClInclude Include="encode_frame.h">
       <Filter>Header Files</Filter>

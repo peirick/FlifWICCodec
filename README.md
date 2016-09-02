@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/1nr6guwkvyxui3rt?svg=true)](https://ci.appveyor.com/project/peirick/flifwiccodec)
+
 # FLIF Windows Codec
 This plugin allows to **decode** and **encode** [FLIF](http://flif.com) files in Windows aplications using the Windows Imaging Component (WIC) API. That allows e.g., to see the files
 in Windows PhotoViewer and Windows Explorer.

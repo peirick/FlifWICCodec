@@ -123,11 +123,9 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
 		for (int i = 0; i < num_images; ++i) {
 			FLIF_IMAGE* image = flif_decoder_get_image(decoder_, i);
 
-			ComPtr<DecodeFrame> frame;
-			frame.reset(new (std::nothrow) DecodeFrame(image));
+			ComPtr<DecodeFrame> frame(new (std::nothrow) DecodeFrame(image));
 			if (frame.get() == nullptr)
 				return E_OUTOFMEMORY;
-
 			frames_[i].reset(frame.new_ref());
 		}
 	}

@@ -45,6 +45,6 @@ private:
     EncodeContainer* container_;
     std::shared_ptr<RawFrame> frame_;
     AnimationInformation animation_information_;
-    std::deque<std::shared_ptr<Metadata>> metadata_;
+    std::deque<ComPtr<IWICMetadataWriter>> metadataWriter_;
 };
 

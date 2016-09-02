@@ -32,7 +32,8 @@ HRESULT EncodeFrame::QueryInterface(REFIID riid, void ** ppvObject)
     }
 
     // Multiple inheritence needs explicit cast
-    if (IsEqualGUID(riid, IID_IWICMetadataBlockWriter))
+    if (IsEqualGUID(riid, IID_IWICMetadataBlockWriter) ||
+        IsEqualGUID(riid, IID_IWICMetadataBlockReader))
     {
         this->AddRef();
         *ppvObject = static_cast<IWICMetadataBlockWriter*>(this);
@@ -356,9 +357,57 @@ HRESULT EncodeFrame::Commit(void)
     if (!frame_.get())
         return WINCODEC_ERR_NOTINITIALIZED;
 
-    HRESULT result = container_->AddImage(frame_, animation_information_, metadata_);
+    std::deque<std::shared_ptr<Metadata>> metadatas;
+    for (int i = 0; i < metadataWriter_.size(); ++i) {
+        std::string metadataName;
+        GUID metadataFormat;
+        if (SUCCEEDED(metadataWriter_[i]->GetMetadataFormat(&metadataFormat)))
+        {
+            if (IsEqualGUID(metadataFormat, GUID_MetadataFormatExif))
+            {
+                metadataName = "eXif";
+            }
+            else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatXMP)) {
+                metadataName = "eXmp";
+            }
+            else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatChunkiCCP))
+            {
+                metadataName = "iCCP";
+            }
+            else {
+                continue;
+            }
+
+            ComPtr<IWICPersistStream> persistStream;
+            if (SUCCEEDED(metadataWriter_[i]->QueryInterface(persistStream.get_out_storage())))
+            {
+                IStream* stream = SHCreateMemStream(NULL, 0);
+                if (SUCCEEDED(persistStream->SaveEx(stream, WICMetadataCreationAllowUnknown | WICPersistOptionDefault, FALSE))) {
+                    // Allocates enough memeory for the content.
+                    STATSTG ssStreamData = {};
+                    if (SUCCEEDED(stream->Stat(&ssStreamData, STATFLAG_NONAME))) {
+                        SIZE_T cbSize = ssStreamData.cbSize.LowPart;
+                        std::shared_ptr<Metadata> metadata(new (std::nothrow) Metadata(metadataName, cbSize));
+                        if (!metadata->Buffer)
+                            return E_OUTOFMEMORY;
+
+                        // Copies the content from the stream to the buffer.
+                        LARGE_INTEGER position;
+                        position.QuadPart = 0;
+                        if (SUCCEEDED((stream->Seek(position, STREAM_SEEK_SET, NULL)))) {
+                            ULONG cbRead;
+                            if (SUCCEEDED(stream->Read(metadata->Buffer, cbSize, &cbRead))) {
+                                metadatas.emplace_back(metadata);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    HRESULT result = container_->AddImage(frame_, animation_information_, metadatas);
     frame_.reset();
-    metadata_.clear();
     return result;
 }
 
@@ -367,8 +416,26 @@ HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetada
     TRACE1("(%p)\n", ppIMetadataQueryWriter);
     if (ppIMetadataQueryWriter == nullptr)
         return E_INVALIDARG;
-    *ppIMetadataQueryWriter = nullptr;
-    return E_NOTIMPL;
+
+    HRESULT result;
+
+    //Create factory
+    ComPtr<IWICImagingFactory> factory;
+    result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
+    if (FAILED(result)) {
+        return result;
+    }
+    ComPtr<IWICComponentFactory> componentFactory;
+    result = factory->QueryInterface(componentFactory.get_out_storage());
+    if (FAILED(result)) {
+        return result;
+    }
+
+    return  componentFactory->CreateQueryWriterFromBlockWriter(static_cast<IWICMetadataBlockWriter*>(this), ppIMetadataQueryWriter);
+
+
+    //*ppIMetadataQueryWriter = nullptr;
+    //return E_NOTIMPL;
 }
 
 HRESULT EncodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
@@ -382,12 +449,11 @@ HRESULT EncodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
 
 HRESULT EncodeFrame::GetCount(UINT * pcCount)
 {
-    return E_NOTIMPL;
-}
-
-HRESULT EncodeFrame::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader)
-{
-    return E_NOTIMPL;
+    TRACE1("(%p)\n", pcCount);
+    if (pcCount == nullptr)
+        return E_INVALIDARG;
+    return metadataWriter_.size();
+    return S_OK;
 }
 
 HRESULT EncodeFrame::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
@@ -408,68 +474,29 @@ HRESULT EncodeFrame::InitializeFromBlockReader(IWICMetadataBlockReader * pIMDBlo
     if (FAILED(result))
         return result;
 
-    //Create factory
-    ComPtr<IWICImagingFactory> factory;
-    result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
-    if (FAILED(result)) {
-        return result;
-    }
-    ComPtr<IWICComponentFactory> componentFactory;
-    result = factory->QueryInterface(componentFactory.get_out_storage());
-    if (FAILED(result)) {
-        return result;
-    }
-
-    for (UINT i = 0; i < blockCount; ++i)
+    if (blockCount > 0)
     {
-        IWICMetadataReader* metadataReader;
-        if (SUCCEEDED(pIMDBlockReader->GetReaderByIndex(i, &metadataReader))) {
-            GUID metadataFormat;
-            if (SUCCEEDED(metadataReader->GetMetadataFormat(&metadataFormat))) {
-                std::string metadataName;
-                if (IsEqualGUID(metadataFormat, GUID_MetadataFormatExif))
-                {
-                    metadataName = "eXif";
-                }
-                else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatXMP)) {
-                    metadataName = "eXmp";
-                }
-                else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatChunkiCCP))
-                {
-                    metadataName = "iCCP";
-                }
-                else {
-                    continue;
-                }
+        //Create factory
+        ComPtr<IWICImagingFactory> factory;
+        result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
+        if (FAILED(result)) {
+            return result;
+        }
+        ComPtr<IWICComponentFactory> componentFactory;
+        result = factory->QueryInterface(componentFactory.get_out_storage());
+        if (FAILED(result)) {
+            return result;
+        }
 
-
+        for (UINT i = 0; i < blockCount; ++i)
+        {
+            IWICMetadataReader* metadataReader;
+            if (SUCCEEDED(pIMDBlockReader->GetReaderByIndex(i, &metadataReader)))
+            {
                 ComPtr<IWICMetadataWriter> metadataWriter;
-                if (SUCCEEDED(componentFactory->CreateMetadataWriterFromReader(metadataReader, NULL, metadataWriter.get_out_storage()))) {
-                    ComPtr<IWICPersistStream> persistStream;
-                    if (SUCCEEDED(metadataWriter->QueryInterface(persistStream.get_out_storage())))
-                    {
-                        IStream* stream = SHCreateMemStream(NULL, 0);
-                        if (SUCCEEDED(persistStream->SaveEx(stream, WICPersistOptionDefault, FALSE))) {
-                            // Allocates enough memeory for the content.
-                            STATSTG ssStreamData = {};
-                            if (SUCCEEDED(stream->Stat(&ssStreamData, STATFLAG_NONAME))) {
-                                SIZE_T cbSize = ssStreamData.cbSize.LowPart;
-                                std::shared_ptr<Metadata> metadata(new Metadata(metadataName, cbSize));
-                                if (!metadata->Buffer)
-                                    return E_OUTOFMEMORY;
-
-                                // Copies the content from the stream to the buffer.
-                                LARGE_INTEGER position;
-                                position.QuadPart = 0;
-                                if (SUCCEEDED((stream->Seek(position, STREAM_SEEK_SET, NULL)))) {
-                                    ULONG cbRead;
-                                    if (SUCCEEDED(stream->Read(metadata->Buffer, cbSize, &cbRead))) {
-                                        metadata_.emplace_back(metadata);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (SUCCEEDED(componentFactory->CreateMetadataWriterFromReader(metadataReader, NULL, metadataWriter.get_out_storage())))
+                {
+                    metadataWriter_.emplace_back(metadataWriter.new_ref());
                 }
             }
         }
@@ -477,23 +504,54 @@ HRESULT EncodeFrame::InitializeFromBlockReader(IWICMetadataBlockReader * pIMDBlo
     return S_OK;
 }
 
+HRESULT EncodeFrame::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader)
+{
+    TRACE2("(%d, %p)\n", nIndex, ppIMetadataReader);
+    if (ppIMetadataReader == nullptr)
+        return E_INVALIDARG;
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    *ppIMetadataReader = static_cast<IWICMetadataReader*>(metadataWriter_[nIndex].new_ref());
+    return S_OK;
+}
+
 HRESULT EncodeFrame::GetWriterByIndex(UINT nIndex, IWICMetadataWriter ** ppIMetadataWriter)
 {
-    return E_NOTIMPL;
+    TRACE2("(%d, %p)\n", nIndex, ppIMetadataWriter);
+    if (ppIMetadataWriter == nullptr)
+        return E_INVALIDARG;
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    *ppIMetadataWriter = metadataWriter_[nIndex].new_ref();
+    return S_OK;
 }
 
 HRESULT EncodeFrame::AddWriter(IWICMetadataWriter * pIMetadataWriter)
 {
-    return E_NOTIMPL;
+    TRACE1("(%p)\n", pIMetadataWriter);
+    if (pIMetadataWriter == nullptr)
+        return E_INVALIDARG;
+    metadataWriter_.emplace_back(pIMetadataWriter);
+    return S_OK;
 }
 
 HRESULT EncodeFrame::SetWriterByIndex(UINT nIndex, IWICMetadataWriter * pIMetadataWriter)
 {
-    return E_NOTIMPL;
+    TRACE2("(%d, %p)\n", nIndex, pIMetadataWriter);
+    if (pIMetadataWriter == nullptr)
+        return E_INVALIDARG;
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    metadataWriter_[nIndex].reset(pIMetadataWriter);
+    return S_OK;
 }
 
 HRESULT EncodeFrame::RemoveWriterByIndex(UINT nIndex)
 {
-    return E_NOTIMPL;
+    TRACE1("(%d)\n", nIndex);
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    //metadataWriter_.erase(metadataWriter_.begin() + nIndex);
+    return S_OK;
 }
 

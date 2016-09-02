@@ -7,7 +7,7 @@
 #include "utils.h"
 #include "encode_container.h"
 
-class EncodeFrame : public ComObjectBase<IWICBitmapFrameEncode>, IWICMetadataBlockWriter {
+class EncodeFrame : public ComObjectBase<IWICBitmapFrameEncode>, public IWICMetadataBlockWriter {
 public:
     explicit EncodeFrame(EncodeContainer* container);
     ~EncodeFrame();

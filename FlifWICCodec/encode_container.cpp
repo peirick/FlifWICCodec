@@ -230,28 +230,3 @@ HRESULT EncodeContainer::AddImage(std::shared_ptr<RawFrame> frame, AnimationInfo
 
     return S_OK;
 }
-
-RawFrame::RawFrame(uint32_t width, uint32_t height, uint32_t numberComponents, uint32_t stride)
-    : Width(width), Height(height), NumberComponents(numberComponents), Stride(stride),
-    BufferSize(stride*height), Buffer((uint8_t*)CoTaskMemAlloc(BufferSize))
-{
-}
-
-RawFrame::~RawFrame()
-{
-    if (Buffer) {
-        CoTaskMemFree(Buffer);
-    }
-}
-
-Metadata::Metadata(std::string chunkname, size_t bufferSize)
-    : Chunkname(chunkname), BufferSize(bufferSize), Buffer((uint8_t*)CoTaskMemAlloc(BufferSize))
-{
-}
-
-Metadata::~Metadata()
-{
-    if (Buffer) {
-        CoTaskMemFree(Buffer);
-    }
-}

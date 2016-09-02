@@ -16,34 +16,6 @@ struct AnimationInformation {
     uint32_t Delay;
 };
 
-struct RawFrame {
-    const uint32_t Width;
-    const uint32_t Height;
-    const uint32_t NumberComponents;
-    const uint32_t Stride;
-    const size_t BufferSize;
-    uint8_t* const Buffer;
-
-    RawFrame(uint32_t width, uint32_t height, uint32_t numberComponents, uint32_t stride);
-    ~RawFrame();
-private:
-    // No copy and assign.
-    RawFrame(const RawFrame&) = delete;
-    void operator=(const RawFrame&) = delete;
-};
-
-struct Metadata {
-    std::string Chunkname;
-    const size_t BufferSize;
-    uint8_t* const Buffer;
-    Metadata(std::string chunkname, size_t bufferSize);
-    ~Metadata();
-private:
-    // No copy and assign.
-    Metadata(const Metadata&) = delete;
-    void operator=(const Metadata&) = delete;
-};
-
 class EncodeContainer : public ComObjectBase<IWICBitmapEncoder> {
 public:
     EncodeContainer();

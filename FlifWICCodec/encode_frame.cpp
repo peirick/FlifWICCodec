@@ -1,6 +1,7 @@
 #include <Shlwapi.h>
 #include "encode_frame.h"
 #include "pixel_converter.h"
+#include "uuid.h"
 
 EncodeFrame::EncodeFrame(EncodeContainer* container)
     : container_(container), frame_(nullptr)
@@ -22,20 +23,15 @@ HRESULT EncodeFrame::QueryInterface(REFIID riid, void ** ppvObject)
         return E_INVALIDARG;
     *ppvObject = nullptr;
 
-    if (IsEqualGUID(riid, IID_IUnknown))
+    if (IsEqualGUID(riid, IID_IUnknown) ||
+        IsEqualGUID(riid, IID_IWICBitmapFrameEncode))
     {
         this->AddRef();
         *ppvObject = static_cast<IWICBitmapFrameEncode*>(this);
         return S_OK;
     }
 
-    if (IsEqualGUID(riid, IID_IWICBitmapFrameEncode))
-    {
-        this->AddRef();
-        *ppvObject = static_cast<IWICBitmapFrameEncode*>(this);
-        return S_OK;
-    }
-
+    // Multiple inheritence needs explicit cast
     if (IsEqualGUID(riid, IID_IWICMetadataBlockWriter))
     {
         this->AddRef();
@@ -377,7 +373,11 @@ HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetada
 
 HRESULT EncodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
 {
-    return E_NOTIMPL;
+    TRACE1("(%p)\n", pguidContainerFormat);
+    if (pguidContainerFormat == nullptr)
+        return E_INVALIDARG;
+    *pguidContainerFormat = GUID_ContainerFormatFLIF;
+    return S_OK;
 }
 
 HRESULT EncodeFrame::GetCount(UINT * pcCount)

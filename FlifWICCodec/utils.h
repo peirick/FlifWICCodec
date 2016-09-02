@@ -82,6 +82,9 @@ public:
 	bool alloc_failed() { return ptr_ == NULL; }
 	BYTE* get() { assert(ptr_ != NULL); return ptr_; }
 private:
+    // No copy and assign.
+    scoped_buffer(const scoped_buffer&) = delete;
+    void operator=(const scoped_buffer&) = delete;
 	BYTE* ptr_;
 };
 

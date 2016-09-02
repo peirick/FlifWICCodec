@@ -1,3 +1,3 @@
 #pragma once
 
-void CopyAllButTransparentPixelRGBA8(size_t width, void* sourceRow, void* destRow);
+void CopyAllButTransparentPixelRGBA8(size_t width, const void* sourceRow, const void* destRow);

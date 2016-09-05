@@ -13,6 +13,7 @@ EncodeContainer::EncodeContainer()
 EncodeContainer::~EncodeContainer()
 {
     TRACE("()\n");
+    DeleteCriticalSection(&cs_);
     if (encoder_) {
         flif_destroy_encoder(encoder_);
         encoder_ = nullptr;

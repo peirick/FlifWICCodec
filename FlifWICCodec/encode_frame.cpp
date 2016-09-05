@@ -6,11 +6,13 @@
 EncodeFrame::EncodeFrame(EncodeContainer* container)
     : container_(container), frame_(nullptr)
 {
+    TRACE("()\n");
     container_->AddRef();
 }
 
 EncodeFrame::~EncodeFrame()
 {
+    TRACE("()\n");
     container_->Release();
 }
 
@@ -432,10 +434,6 @@ HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetada
     }
 
     return  componentFactory->CreateQueryWriterFromBlockWriter(static_cast<IWICMetadataBlockWriter*>(this), ppIMetadataQueryWriter);
-
-
-    //*ppIMetadataQueryWriter = nullptr;
-    //return E_NOTIMPL;
 }
 
 HRESULT EncodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
@@ -452,7 +450,7 @@ HRESULT EncodeFrame::GetCount(UINT * pcCount)
     TRACE1("(%p)\n", pcCount);
     if (pcCount == nullptr)
         return E_INVALIDARG;
-    return metadataWriter_.size();
+    *pcCount = metadataWriter_.size();
     return S_OK;
 }
 

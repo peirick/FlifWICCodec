@@ -7,7 +7,7 @@
 #include <flif.h>
 #include "utils.h"
 
-class DecodeFrame : public ComObjectBase<IWICBitmapFrameDecode>, public IWICMetadataBlockReader {
+class DecodeFrame : public ComObjectBase<IWICBitmapFrameDecode>, private IWICMetadataBlockReader {
 public:
     explicit DecodeFrame(FLIF_IMAGE* image);
     ~DecodeFrame();

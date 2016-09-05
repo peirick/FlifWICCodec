@@ -4,7 +4,6 @@
 #include "utils.h"
 #include "decode_container.h"
 #include "decode_frame.h"
-#include "decode_metadata_reader.h"
 
 DecodeContainer::DecodeContainer() : decoder_(nullptr)
 {

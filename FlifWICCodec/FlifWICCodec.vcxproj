@@ -98,7 +98,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>flif_wic_codec.def</ModuleDefinitionFile>
-      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib;OleAut32.lib;Propsys.lib</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
@@ -117,7 +117,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>flif_wic_codec.def</ModuleDefinitionFile>
-      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib;OleAut32.lib;Propsys.lib</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
@@ -143,7 +143,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>flif_wic_codec.def</ModuleDefinitionFile>
-      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib;OleAut32.lib;Propsys.lib</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
@@ -170,7 +170,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>flif_wic_codec.def</ModuleDefinitionFile>
-      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;windowscodecs.lib;ole32.lib;OleAut32.lib;Propsys.lib</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
@@ -180,7 +180,6 @@
   <ItemGroup>
     <ClCompile Include="decode_container.cpp" />
     <ClCompile Include="decode_frame.cpp" />
-    <ClCompile Include="decode_metadata_reader.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -197,14 +196,16 @@
     </ClCompile>
     <ClCompile Include="encode_container.cpp" />
     <ClCompile Include="encode_frame.cpp" />
+    <ClCompile Include="metadata_store.cpp" />
     <ClCompile Include="pixel_converter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="decode_container.h" />
     <ClInclude Include="decode_frame.h" />
-    <ClInclude Include="decode_metadata_reader.h" />
+    <ClInclude Include="dllmain.h" />
     <ClInclude Include="encode_container.h" />
     <ClInclude Include="encode_frame.h" />
+    <ClInclude Include="metadata_store.h" />
     <ClInclude Include="pixel_converter.h" />
     <ClInclude Include="resids.h" />
     <ClInclude Include="stopwatch.h" />

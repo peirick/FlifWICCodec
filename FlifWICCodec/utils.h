@@ -6,7 +6,6 @@
 #include <string>
 #include "dllmain.h"
 
-
 struct RawFrame {
     const uint32_t Width;
     const uint32_t Height;
@@ -109,17 +108,16 @@ public:
     }
 
     // IUnknown methods:
-    virtual ULONG STDMETHODCALLTYPE AddRef() {
+    virtual ULONG STDMETHODCALLTYPE AddRef() override {
         return InterlockedIncrement(&ref_count_);
     }
 
-    virtual ULONG STDMETHODCALLTYPE Release() {
+    virtual ULONG STDMETHODCALLTYPE Release() override {
         ULONG ret = InterlockedDecrement(&ref_count_);
         if (ret == 0)
             delete this;
         return ret;
     }
-
 protected:
     volatile ULONG ref_count_;
 };

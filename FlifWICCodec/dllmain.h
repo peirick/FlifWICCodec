@@ -14,7 +14,7 @@ void MAIN_debug_printf(_In_z_ const char* prefix, _In_z_ const char* func, _In_z
 #define TRACE4(fmt, a, b, c, d) MAIN_debug_printf("trace", __FUNCTION__, fmt, a, b, c, d)
 
 char *debugstr_guid(REFGUID guid);
-
+WCHAR *debugstr_var(REFPROPVARIANT var);
 #else
 #define TRACE(fmt)
 #define TRACE1(fmt, a)

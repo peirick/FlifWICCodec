@@ -3,7 +3,6 @@
 #include <memory>
 #include <Shlwapi.h>
 #include "decode_frame.h"
-#include "decode_metadata_reader.h"
 #include "dllmain.h"
 #include "uuid.h"
 
@@ -16,10 +15,12 @@
 
 DecodeFrame::DecodeFrame(FLIF_IMAGE * image) :image_(image)
 {
+    TRACE("()\n");
 }
 
 DecodeFrame::~DecodeFrame()
 {
+    TRACE("()\n");
 }
 
 
@@ -152,6 +153,7 @@ HRESULT DecodeFrame::GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadat
     ComPtr<IWICImagingFactory> factory;
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage())))
         return S_FALSE;
+
     ComPtr<IWICComponentFactory> componentFactory;
     if (FAILED(factory->QueryInterface(componentFactory.get_out_storage())))
         return S_FALSE;

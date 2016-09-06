@@ -41,10 +41,12 @@ private:
     // No copy and assign.
     EncodeContainer(const EncodeContainer&) = delete;
     void operator=(const EncodeContainer&) = delete;
+    HRESULT InitializeFactory();
 
     std::shared_ptr<RawFrame> current_frame_;
     FLIF_ENCODER* encoder_;
     IStream* pIStream_;
     ComPtr<IWICImagingFactory> factory_;
     CRITICAL_SECTION cs_;
+
 };

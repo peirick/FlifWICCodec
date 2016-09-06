@@ -69,8 +69,13 @@ HRESULT DecodeContainer::QueryCapability(IStream* pIStream, DWORD* pdwCapability
     HRESULT ret = IsValidFLIF(pIStream);
     if (ret == WINCODEC_ERR_BADHEADER)
         return WINCODEC_ERR_WRONGSTATE;  // That's what Win7 jpeg codec returns.
+
     if (ret == S_OK)
-        *pdwCapability = WICBitmapDecoderCapabilityCanDecodeSomeImages | WICBitmapDecoderCapabilityCanEnumerateMetadata;
+        *pdwCapability =
+        WICBitmapDecoderCapabilityCanDecodeSomeImages
+        | WICBitmapDecoderCapabilityCanDecodeAllImages
+        | WICBitmapDecoderCapabilityCanDecodeThumbnail
+        | WICBitmapDecoderCapabilityCanEnumerateMetadata;
     return ret;
 }
 
@@ -91,14 +96,22 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
     frames_.clear();
 
     STATSTG stats;
-    pIStream->Stat(&stats, STATFLAG_NONAME);
+    ret = pIStream->Stat(&stats, STATFLAG_NONAME);
+    if (FAILED(ret))
+        return ret;
     ULONG stream_size = stats.cbSize.QuadPart;
     TRACE1("stream_size %d\n", stream_size);
     ULONG bytes_read;
     scoped_buffer file_data(stream_size);
+    if (file_data.get() == nullptr)
+        return WINCODEC_ERR_OUTOFMEMORY;
+
     LARGE_INTEGER zero;
     zero.QuadPart = 0;
-    pIStream->Seek(zero, STREAM_SEEK_SET, nullptr);
+    ret = pIStream->Seek(zero, STREAM_SEEK_SET, nullptr);
+    if (FAILED(ret))
+        return ret;
+
     ret = pIStream->Read(file_data.get(), stream_size, &bytes_read);
     TRACE1("bytes_read %d\n", bytes_read);
     if (FAILED(ret)) {
@@ -121,11 +134,15 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
         frames_.resize(num_images);
         for (int i = 0; i < num_images; ++i) {
             FLIF_IMAGE* image = flif_decoder_get_image(decoder_, i);
-
-            ComPtr<DecodeFrame> frame(new (std::nothrow) DecodeFrame(image));
-            if (frame.get() == nullptr)
-                return E_OUTOFMEMORY;
-            frames_[i].reset(frame.new_ref());
+            if (image) {
+                ComPtr<DecodeFrame> frame(new (std::nothrow) DecodeFrame(image));
+                if (frame.get() == nullptr)
+                    return E_OUTOFMEMORY;
+                frames_[i].reset(frame.new_ref());
+            }
+            else {
+                frames_[i].reset(nullptr);
+            }
         }
     }
     else {
@@ -146,23 +163,30 @@ HRESULT DecodeContainer::GetContainerFormat(GUID* pguidContainerFormat) {
     return S_OK;
 }
 
+HRESULT DecodeContainer::InitializeFactory()
+{
+    SectionLock l(&cs_);
+    HRESULT result = S_OK;
+    if (factory_.get() == nullptr) {
+        result = CoCreateInstance(CLSID_WICImagingFactory,
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            IID_IWICImagingFactory,
+            (LPVOID*)factory_.get_out_storage());
+    }
+    return result;
+}
+
 HRESULT DecodeContainer::GetDecoderInfo(IWICBitmapDecoderInfo** ppIDecoderInfo) {
     TRACE1("(%p)\n", ppIDecoderInfo);
     HRESULT result;
-    ComPtr<IWICImagingFactory> factory;
 
-    {
-        SectionLock l(&cs_);
-        if (factory_.get() == nullptr) {
-            result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory_.get_out_storage());
-            if (FAILED(result))
-                return result;
-        }
-        factory.reset(factory_.new_ref());
-    }
+    result = InitializeFactory();
+    if (FAILED(result))
+        return result;
 
     ComPtr<IWICComponentInfo> compInfo;
-    result = factory->CreateComponentInfo(CLSID_FLIFWICDecoder, compInfo.get_out_storage());
+    result = factory_->CreateComponentInfo(CLSID_FLIFWICDecoder, compInfo.get_out_storage());
     if (FAILED(result))
         return result;
 
@@ -194,7 +218,6 @@ HRESULT DecodeContainer::GetPreview(IWICBitmapSource** ppIBitmapSource) {
         return E_INVALIDARG;
     if (decoder_ == nullptr)
         return WINCODEC_ERR_NOTINITIALIZED;
-    SectionLock l(&cs_);
     *ppIBitmapSource = frames_[0].new_ref();
     return S_OK;
 }
@@ -211,7 +234,6 @@ HRESULT DecodeContainer::GetThumbnail(IWICBitmapSource** ppIThumbnail)
         return E_INVALIDARG;
     if (decoder_ == nullptr)
         return WINCODEC_ERR_NOTINITIALIZED;
-    SectionLock l(&cs_);
     *ppIThumbnail = frames_[0].new_ref();
     return S_OK;
 }
@@ -243,3 +265,5 @@ HRESULT DecodeContainer::GetFrame(UINT index, IWICBitmapFrameDecode** ppIBitmapF
     *ppIBitmapFrame = frames_[index].new_ref();
     return S_OK;
 }
+
+

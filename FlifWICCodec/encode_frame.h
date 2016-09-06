@@ -56,9 +56,14 @@ private:
     // No copy and assign.
     EncodeFrame(const EncodeFrame&) = delete;
     void operator=(const EncodeFrame&) = delete;
+    HRESULT InitializeFactory();
+
     EncodeContainer* container_;
     std::shared_ptr<RawFrame> frame_;
     AnimationInformation animation_information_;
     MetadataBlockWriter metadataBlockWriter_;
+    ComPtr<IWICImagingFactory> factory_;
+    ComPtr<IWICComponentFactory> componentFactory_;
+    CRITICAL_SECTION cs_;
 };
 

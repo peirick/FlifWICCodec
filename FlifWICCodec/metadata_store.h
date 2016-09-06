@@ -37,25 +37,6 @@ private:
         MetadataStore& metadataStore_;
     };
 
-    class NamedPropertyStore : public INamedPropertyStore
-    {
-    public:
-        NamedPropertyStore(MetadataStore& metadataStore) : metadataStore_(metadataStore) {}
-        // Inherited via IUnknown:
-        HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override { return metadataStore_.QueryInterface(riid, ppvObject); };
-        ULONG STDMETHODCALLTYPE AddRef() override { return metadataStore_.AddRef(); }
-        ULONG STDMETHODCALLTYPE Release() override { return metadataStore_.Release(); }
-        // Inherited via INamedPropertyStore
-        virtual HRESULT STDMETHODCALLTYPE GetNamedValue(LPCWSTR pszName, PROPVARIANT * ppropvar) override;
-        virtual HRESULT STDMETHODCALLTYPE SetNamedValue(LPCWSTR pszName, REFPROPVARIANT propvar) override;
-        virtual HRESULT STDMETHODCALLTYPE GetNameCount(DWORD * pdwCount) override;
-        virtual HRESULT STDMETHODCALLTYPE GetNameAt(DWORD iProp, BSTR * pbstrName) override;
-    private:
-        MetadataStore& metadataStore_;
-
-
-    };
-
     class PropertyStoreCapabilities : public IPropertyStoreCapabilities
     {
     public:
@@ -80,6 +61,5 @@ private:
 
     std::vector<PropertyData> metadata_;
     InitializeWithStream initializeWithStream_;
-    NamedPropertyStore namedPropertyStore_;
     PropertyStoreCapabilities propertyStoreCapabilities_;
 };

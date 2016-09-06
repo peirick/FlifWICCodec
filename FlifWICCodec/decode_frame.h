@@ -49,8 +49,11 @@ private:
     // No copy and assign.
     DecodeFrame(const DecodeFrame&) = delete;
     void operator=(const DecodeFrame&) = delete;
+    HRESULT InitializeFactory();
 
+    CRITICAL_SECTION cs_;
     FLIF_IMAGE*				   image_;
     ComPtr<IWICImagingFactory> factory_;
+    ComPtr<IWICComponentFactory> componentFactory_;
     MetadataBlockReader        metadataBlockReader_;
 };

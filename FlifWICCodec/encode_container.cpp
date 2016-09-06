@@ -60,24 +60,31 @@ HRESULT EncodeContainer::GetContainerFormat(GUID * pguidContainerFormat)
     return S_OK;
 }
 
+HRESULT EncodeContainer::InitializeFactory()
+{
+    SectionLock l(&cs_);
+    HRESULT result = S_OK;
+    if (factory_.get() == nullptr) {
+        result = CoCreateInstance(CLSID_WICImagingFactory,
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            IID_IWICImagingFactory,
+            (LPVOID*)factory_.get_out_storage());
+    }
+    return result;
+}
+
 HRESULT EncodeContainer::GetEncoderInfo(IWICBitmapEncoderInfo ** ppIEncoderInfo)
 {
     TRACE1("(%p)\n", ppIEncoderInfo);
     HRESULT result;
-    ComPtr<IWICImagingFactory> factory;
 
-    {
-        SectionLock l(&cs_);
-        if (factory_.get() == nullptr) {
-            result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory_.get_out_storage());
-            if (FAILED(result))
-                return result;
-        }
-        factory.reset(factory_.new_ref());
-    }
+    result = InitializeFactory();
+    if (FAILED(result))
+        return result;
 
     ComPtr<IWICComponentInfo> compInfo;
-    result = factory->CreateComponentInfo(CLSID_FLIFWICEncoder, compInfo.get_out_storage());
+    result = factory_->CreateComponentInfo(CLSID_FLIFWICEncoder, compInfo.get_out_storage());
     if (FAILED(result))
         return result;
 

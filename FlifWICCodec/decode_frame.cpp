@@ -17,11 +17,13 @@ DecodeFrame::DecodeFrame(FLIF_IMAGE * image)
     :image_(image), metadataBlockReader_(*this)
 {
     TRACE("()\n");
+    InitializeCriticalSection(&cs_);
 }
 
 DecodeFrame::~DecodeFrame()
 {
     TRACE("()\n");
+    DeleteCriticalSection(&cs_);
 }
 
 
@@ -41,7 +43,6 @@ HRESULT DecodeFrame::QueryInterface(REFIID riid, void **ppvObject) {
         return S_OK;
     }
 
-    // Multiple inheritance needs explicit cast
     if (IsEqualGUID(riid, IID_IWICMetadataBlockReader))
     {
         this->AddRef();
@@ -144,22 +145,14 @@ HRESULT DecodeFrame::GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadat
     TRACE1("(%p)\n", ppIMetadataQueryReader);
     if (ppIMetadataQueryReader == nullptr)
         return E_INVALIDARG;
-    //uint32_t image_width = flif_image_get_width(image_);
-    //uint32_t image_height = flif_image_get_height(image_);
-    //uint32_t frame_delay = flif_image_get_frame_delay(image_);
-    //*ppIMetadataQueryReader = new DecodeMetadataQueryReader(image_width, image_height, frame_delay)
-    //return S_OK;
 
+    HRESULT result = S_OK;
     //Create factory
-    ComPtr<IWICImagingFactory> factory;
-    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage())))
-        return S_FALSE;
+    result = InitializeFactory();
+    if (FAILED(result))
+        return result;
 
-    ComPtr<IWICComponentFactory> componentFactory;
-    if (FAILED(factory->QueryInterface(componentFactory.get_out_storage())))
-        return S_FALSE;
-
-    return componentFactory->CreateQueryReaderFromBlockReader(static_cast<IWICMetadataBlockReader*>(&this->metadataBlockReader_), ppIMetadataQueryReader);
+    return componentFactory_->CreateQueryReaderFromBlockReader(static_cast<IWICMetadataBlockReader*>(&this->metadataBlockReader_), ppIMetadataQueryReader);
 }
 
 HRESULT DecodeFrame::GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) {
@@ -173,6 +166,31 @@ HRESULT DecodeFrame::GetColorContexts(UINT cCount, IWICColorContext **ppIColorCo
 HRESULT DecodeFrame::GetThumbnail(IWICBitmapSource **ppIThumbnail) {
     TRACE1("(%p)\n", ppIThumbnail);
     return WINCODEC_ERR_CODECNOTHUMBNAIL;
+}
+
+HRESULT DecodeFrame::InitializeFactory()
+{
+    SectionLock l(&cs_);
+    HRESULT result = S_OK;
+    if (factory_.get() == nullptr)
+    {
+        result = CoCreateInstance(CLSID_WICImagingFactory,
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            IID_IWICImagingFactory,
+            (LPVOID*)factory_.get_out_storage());
+        if (FAILED(result))
+            return result;
+    }
+    if (factory_.get() != nullptr &&
+        componentFactory_.get() == nullptr)
+    {
+        result = factory_->QueryInterface(componentFactory_.get_out_storage());
+        if (FAILED(result)) {
+            return result;
+        }
+    }
+    return result;
 }
 
 HRESULT DecodeFrame::MetadataBlockReader::GetContainerFormat(GUID * pguidContainerFormat)
@@ -194,17 +212,13 @@ void DecodeFrame::MetadataBlockReader::ReadMetadata(GUID metadataFormat, const c
         //Create stream
         ComPtr<IStream> stream(SHCreateMemStream(data, length));
 
-        //Create factory
-        ComPtr<IWICImagingFactory> factory;
-        if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage())))
-            return;
-        ComPtr<IWICComponentFactory> componentFactory;
-        if (FAILED(factory->QueryInterface(componentFactory.get_out_storage())))
+        //Create factory        
+        if (FAILED(decodeFrame_.InitializeFactory()))
             return;
 
         // Create reader of stream
         ComPtr<IWICMetadataReader> reader;
-        if (FAILED(componentFactory->CreateMetadataReader(metadataFormat, nullptr, WICPersistOptionDefault, stream.get(), reader.get_out_storage())))
+        if (FAILED(decodeFrame_.componentFactory_->CreateMetadataReader(metadataFormat, nullptr, WICPersistOptionDefault, stream.get(), reader.get_out_storage())))
             return;
 
         // Store Reader for later use

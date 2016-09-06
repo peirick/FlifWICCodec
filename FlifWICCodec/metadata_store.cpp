@@ -5,7 +5,6 @@
 
 MetadataStore::MetadataStore()
     : initializeWithStream_(*this)
-    , namedPropertyStore_(*this)
     , propertyStoreCapabilities_(*this)
 {
     TRACE("()\n");
@@ -32,7 +31,6 @@ HRESULT MetadataStore::QueryInterface(REFIID riid, void ** ppvObject)
         return S_OK;
     }
 
-    // Multiple inheritance needs explicit cast
     if (IsEqualGUID(riid, IID_IInitializeWithStream))
     {
         this->AddRef();
@@ -40,15 +38,6 @@ HRESULT MetadataStore::QueryInterface(REFIID riid, void ** ppvObject)
         return S_OK;
     }
 
-    // Multiple inheritance needs explicit cast
-    if (IsEqualGUID(riid, IID_INamedPropertyStore))
-    {
-        this->AddRef();
-        *ppvObject = static_cast<INamedPropertyStore*>(&this->namedPropertyStore_);
-        return S_OK;
-    }
-
-    // Multiple inheritance needs explicit cast
     if (IsEqualGUID(riid, IID_IPropertyStoreCapabilities))
     {
         this->AddRef();
@@ -164,60 +153,6 @@ HRESULT MetadataStore::InitializeWithStream::Initialize(IStream * pstream, DWORD
 
 
     return result;
-}
-
-HRESULT MetadataStore::NamedPropertyStore::GetNamedValue(LPCWSTR pszName, PROPVARIANT * ppropvar)
-{
-    TRACE2("(%ls, %p)\n", pszName, ppropvar);
-    if (pszName == nullptr)
-        return E_INVALIDARG;
-    if (ppropvar == nullptr)
-        return E_INVALIDARG;
-
-    PropVariantClear(ppropvar);
-    for (const PropertyData& data : metadataStore_.metadata_) {
-        if (StrCmpICW(data.name, pszName) == 0) {
-            PropVariantCopy(ppropvar, &data.value);
-            break;
-        }
-    }
-    return S_OK;
-}
-
-HRESULT MetadataStore::NamedPropertyStore::SetNamedValue(LPCWSTR pszName, REFPROPVARIANT propvar)
-{
-    TRACE2("(%ls, %ls)\n", pszName, debugstr_var(propvar));
-    if (pszName == nullptr)
-        return E_INVALIDARG;
-
-    for (PropertyData& data : metadataStore_.metadata_) {
-        if (StrCmpICW(data.name, pszName) == 0) {
-            PropVariantCopy(&data.value, &propvar);
-            break;
-        }
-    }
-    return S_OK;
-}
-
-HRESULT MetadataStore::NamedPropertyStore::GetNameCount(DWORD * pdwCount)
-{
-    TRACE1("(%p)\n", pdwCount);
-    if (pdwCount == nullptr)
-        return E_INVALIDARG;
-    *pdwCount = metadataStore_.metadata_.size();
-    return S_OK;
-}
-
-HRESULT MetadataStore::NamedPropertyStore::GetNameAt(DWORD iProp, BSTR * pbstrName)
-{
-    TRACE2("(%d, %p)\n", iProp, pbstrName);
-    if (pbstrName == nullptr)
-        return E_INVALIDARG;
-    if (iProp >= metadataStore_.metadata_.size())
-        return E_INVALIDARG;
-
-    *pbstrName = SysAllocString(metadataStore_.metadata_[iProp].name);
-    return S_OK;
 }
 
 HRESULT MetadataStore::PropertyStoreCapabilities::IsPropertyWritable(REFPROPERTYKEY key)

@@ -8,12 +8,14 @@ EncodeFrame::EncodeFrame(EncodeContainer* container)
 {
     TRACE("()\n");
     container_->AddRef();
+    InitializeCriticalSection(&cs_);
 }
 
 EncodeFrame::~EncodeFrame()
 {
     TRACE("()\n");
     container_->Release();
+    DeleteCriticalSection(&cs_);
 }
 
 
@@ -208,8 +210,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
         source_pixel_format != GUID_WICPixelFormat8bppGray)
     {
         //Create factory
-        ComPtr<IWICImagingFactory> factory;
-        result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
+        result = InitializeFactory();
         if (FAILED(result)) {
             return result;
         }
@@ -243,7 +244,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
         {
             //Set destination pixelformat from palette info
             ComPtr<IWICPalette> palette;
-            result = factory->CreatePalette(palette.get_out_storage());
+            result = factory_->CreatePalette(palette.get_out_storage());
             if (FAILED(result)) {
                 return result;
             }
@@ -283,7 +284,7 @@ HRESULT EncodeFrame::WriteSource(IWICBitmapSource* pIBitmapSource, WICRect * prc
         }
 
         //Create Converter		
-        result = factory->CreateFormatConverter(converter.get_out_storage());
+        result = factory_->CreateFormatConverter(converter.get_out_storage());
         if (FAILED(result)) {
             return result;
         }
@@ -371,6 +372,35 @@ HRESULT EncodeFrame::Commit(void)
     return result;
 }
 
+HRESULT EncodeFrame::InitializeFactory()
+{
+    SectionLock l(&cs_);
+    HRESULT result = S_OK;
+
+    if (factory_.get() == nullptr)
+    {
+        result = CoCreateInstance(CLSID_WICImagingFactory,
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            IID_IWICImagingFactory,
+            (LPVOID*)factory_.get_out_storage());
+        if (FAILED(result))
+            return result;
+
+    }
+
+    if (factory_.get() != nullptr &&
+        componentFactory_.get() == nullptr)
+    {
+        result = factory_->QueryInterface(componentFactory_.get_out_storage());
+        if (FAILED(result)) {
+            return result;
+        }
+    }
+
+    return result;
+}
+
 HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetadataQueryWriter)
 {
     TRACE1("(%p)\n", ppIMetadataQueryWriter);
@@ -379,19 +409,12 @@ HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetada
 
     HRESULT result;
 
-    //Create factory
-    ComPtr<IWICImagingFactory> factory;
-    result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
-    if (FAILED(result)) {
+    //Create factory   
+    result = InitializeFactory();
+    if (FAILED(result))
         return result;
-    }
-    ComPtr<IWICComponentFactory> componentFactory;
-    result = factory->QueryInterface(componentFactory.get_out_storage());
-    if (FAILED(result)) {
-        return result;
-    }
 
-    return  componentFactory->CreateQueryWriterFromBlockWriter(static_cast<IWICMetadataBlockWriter*>(&this->metadataBlockWriter_), ppIMetadataQueryWriter);
+    return  componentFactory_->CreateQueryWriterFromBlockWriter(static_cast<IWICMetadataBlockWriter*>(&this->metadataBlockWriter_), ppIMetadataQueryWriter);
 }
 
 HRESULT EncodeFrame::MetadataBlockWriter::GetContainerFormat(GUID * pguidContainerFormat)
@@ -433,17 +456,10 @@ HRESULT EncodeFrame::MetadataBlockWriter::InitializeFromBlockReader(IWICMetadata
 
     if (blockCount > 0)
     {
-        //Create factory
-        ComPtr<IWICImagingFactory> factory;
-        result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
-        if (FAILED(result)) {
+        //Create factory   
+        result = encodeFrame_.InitializeFactory();
+        if (FAILED(result))
             return result;
-        }
-        ComPtr<IWICComponentFactory> componentFactory;
-        result = factory->QueryInterface(componentFactory.get_out_storage());
-        if (FAILED(result)) {
-            return result;
-        }
 
         for (UINT i = 0; i < blockCount; ++i)
         {
@@ -451,7 +467,7 @@ HRESULT EncodeFrame::MetadataBlockWriter::InitializeFromBlockReader(IWICMetadata
             if (SUCCEEDED(pIMDBlockReader->GetReaderByIndex(i, &metadataReader)))
             {
                 ComPtr<IWICMetadataWriter> metadataWriter;
-                if (SUCCEEDED(componentFactory->CreateMetadataWriterFromReader(metadataReader, NULL, metadataWriter.get_out_storage())))
+                if (SUCCEEDED(encodeFrame_.componentFactory_->CreateMetadataWriterFromReader(metadataReader, NULL, metadataWriter.get_out_storage())))
                 {
                     metadataWriter_.emplace_back(metadataWriter.new_ref());
                 }

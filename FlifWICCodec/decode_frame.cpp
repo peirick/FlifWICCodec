@@ -13,7 +13,8 @@
 
 //const int kBytesPerPixel = 4;
 
-DecodeFrame::DecodeFrame(FLIF_IMAGE * image) :image_(image)
+DecodeFrame::DecodeFrame(FLIF_IMAGE * image)
+    :image_(image), metadataBlockReader_(*this)
 {
     TRACE("()\n");
 }
@@ -44,7 +45,7 @@ HRESULT DecodeFrame::QueryInterface(REFIID riid, void **ppvObject) {
     if (IsEqualGUID(riid, IID_IWICMetadataBlockReader))
     {
         this->AddRef();
-        *ppvObject = static_cast<IWICMetadataBlockReader*>(this);
+        *ppvObject = static_cast<IWICMetadataBlockReader*>(&this->metadataBlockReader_);
         return S_OK;
     }
 
@@ -158,7 +159,7 @@ HRESULT DecodeFrame::GetMetadataQueryReader(IWICMetadataQueryReader **ppIMetadat
     if (FAILED(factory->QueryInterface(componentFactory.get_out_storage())))
         return S_FALSE;
 
-    return componentFactory->CreateQueryReaderFromBlockReader(static_cast<IWICMetadataBlockReader*>(this), ppIMetadataQueryReader);
+    return componentFactory->CreateQueryReaderFromBlockReader(static_cast<IWICMetadataBlockReader*>(&this->metadataBlockReader_), ppIMetadataQueryReader);
 }
 
 HRESULT DecodeFrame::GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) {
@@ -174,7 +175,7 @@ HRESULT DecodeFrame::GetThumbnail(IWICBitmapSource **ppIThumbnail) {
     return WINCODEC_ERR_CODECNOTHUMBNAIL;
 }
 
-HRESULT DecodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
+HRESULT DecodeFrame::MetadataBlockReader::GetContainerFormat(GUID * pguidContainerFormat)
 {
     TRACE1("(%p)\n", pguidContainerFormat);
     if (pguidContainerFormat == nullptr)
@@ -183,11 +184,11 @@ HRESULT DecodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
     return S_OK;
 }
 
-void DecodeFrame::ReadMetadata(GUID metadataFormat, const char* name)
+void DecodeFrame::MetadataBlockReader::ReadMetadata(GUID metadataFormat, const char* name)
 {
     uint8_t* data = nullptr;
     size_t length = 0;
-    flif_image_get_metadata(image_, name, &data, &length);
+    flif_image_get_metadata(decodeFrame_.image_, name, &data, &length);
     if (data && length > 0)
     {
         //Create stream
@@ -211,7 +212,7 @@ void DecodeFrame::ReadMetadata(GUID metadataFormat, const char* name)
     }
 }
 
-HRESULT DecodeFrame::GetCount(UINT * pcCount)
+HRESULT DecodeFrame::MetadataBlockReader::GetCount(UINT * pcCount)
 {
     TRACE1("(%p)\n", pcCount);
     if (pcCount == nullptr)
@@ -224,7 +225,7 @@ HRESULT DecodeFrame::GetCount(UINT * pcCount)
     return S_OK;
 }
 
-HRESULT DecodeFrame::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader)
+HRESULT DecodeFrame::MetadataBlockReader::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader)
 {
     TRACE2("(%d, %p)\n", nIndex, ppIMetadataReader);
     if (ppIMetadataReader == nullptr)
@@ -236,7 +237,7 @@ HRESULT DecodeFrame::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMeta
     return S_OK;
 }
 
-HRESULT DecodeFrame::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
+HRESULT DecodeFrame::MetadataBlockReader::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
 {
     TRACE1("(%p)\n", ppIEnumMetadata);
     return E_NOTIMPL;

@@ -4,7 +4,7 @@
 #include "uuid.h"
 
 EncodeFrame::EncodeFrame(EncodeContainer* container)
-    : container_(container), frame_(nullptr)
+    : container_(container), frame_(nullptr), metadataBlockWriter_(*this)
 {
     TRACE("()\n");
     container_->AddRef();
@@ -38,7 +38,7 @@ HRESULT EncodeFrame::QueryInterface(REFIID riid, void ** ppvObject)
         IsEqualGUID(riid, IID_IWICMetadataBlockReader))
     {
         this->AddRef();
-        *ppvObject = static_cast<IWICMetadataBlockWriter*>(this);
+        *ppvObject = static_cast<IWICMetadataBlockWriter*>(&this->metadataBlockWriter_);
         return S_OK;
     }
     return E_NOINTERFACE;
@@ -359,7 +359,161 @@ HRESULT EncodeFrame::Commit(void)
     if (!frame_.get())
         return WINCODEC_ERR_NOTINITIALIZED;
 
+    HRESULT result = S_OK;
+
     std::deque<std::shared_ptr<Metadata>> metadatas;
+    result = metadataBlockWriter_.GetMetadatas(metadatas);
+    if (FAILED(result))
+        return result;
+
+    result = container_->AddImage(frame_, animation_information_, metadatas);
+    frame_.reset();
+    return result;
+}
+
+HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetadataQueryWriter)
+{
+    TRACE1("(%p)\n", ppIMetadataQueryWriter);
+    if (ppIMetadataQueryWriter == nullptr)
+        return E_INVALIDARG;
+
+    HRESULT result;
+
+    //Create factory
+    ComPtr<IWICImagingFactory> factory;
+    result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
+    if (FAILED(result)) {
+        return result;
+    }
+    ComPtr<IWICComponentFactory> componentFactory;
+    result = factory->QueryInterface(componentFactory.get_out_storage());
+    if (FAILED(result)) {
+        return result;
+    }
+
+    return  componentFactory->CreateQueryWriterFromBlockWriter(static_cast<IWICMetadataBlockWriter*>(&this->metadataBlockWriter_), ppIMetadataQueryWriter);
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::GetContainerFormat(GUID * pguidContainerFormat)
+{
+    TRACE1("(%p)\n", pguidContainerFormat);
+    if (pguidContainerFormat == nullptr)
+        return E_INVALIDARG;
+    *pguidContainerFormat = GUID_ContainerFormatFLIF;
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::GetCount(UINT * pcCount)
+{
+    TRACE1("(%p)\n", pcCount);
+    if (pcCount == nullptr)
+        return E_INVALIDARG;
+    *pcCount = metadataWriter_.size();
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
+{
+    TRACE1("(%p)\n", ppIEnumMetadata);
+    return E_NOTIMPL;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::InitializeFromBlockReader(IWICMetadataBlockReader * pIMDBlockReader)
+{
+    TRACE1("(%p)\n", pIMDBlockReader);
+    if (pIMDBlockReader == nullptr)
+        return E_INVALIDARG;
+
+    HRESULT result;
+
+    UINT blockCount = 0;
+    result = pIMDBlockReader->GetCount(&blockCount);
+    if (FAILED(result))
+        return result;
+
+    if (blockCount > 0)
+    {
+        //Create factory
+        ComPtr<IWICImagingFactory> factory;
+        result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
+        if (FAILED(result)) {
+            return result;
+        }
+        ComPtr<IWICComponentFactory> componentFactory;
+        result = factory->QueryInterface(componentFactory.get_out_storage());
+        if (FAILED(result)) {
+            return result;
+        }
+
+        for (UINT i = 0; i < blockCount; ++i)
+        {
+            IWICMetadataReader* metadataReader;
+            if (SUCCEEDED(pIMDBlockReader->GetReaderByIndex(i, &metadataReader)))
+            {
+                ComPtr<IWICMetadataWriter> metadataWriter;
+                if (SUCCEEDED(componentFactory->CreateMetadataWriterFromReader(metadataReader, NULL, metadataWriter.get_out_storage())))
+                {
+                    metadataWriter_.emplace_back(metadataWriter.new_ref());
+                }
+            }
+        }
+    }
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader)
+{
+    TRACE2("(%d, %p)\n", nIndex, ppIMetadataReader);
+    if (ppIMetadataReader == nullptr)
+        return E_INVALIDARG;
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    *ppIMetadataReader = static_cast<IWICMetadataReader*>(metadataWriter_[nIndex].new_ref());
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::GetWriterByIndex(UINT nIndex, IWICMetadataWriter ** ppIMetadataWriter)
+{
+    TRACE2("(%d, %p)\n", nIndex, ppIMetadataWriter);
+    if (ppIMetadataWriter == nullptr)
+        return E_INVALIDARG;
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    *ppIMetadataWriter = metadataWriter_[nIndex].new_ref();
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::AddWriter(IWICMetadataWriter * pIMetadataWriter)
+{
+    TRACE1("(%p)\n", pIMetadataWriter);
+    if (pIMetadataWriter == nullptr)
+        return E_INVALIDARG;
+    metadataWriter_.emplace_back(pIMetadataWriter);
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::SetWriterByIndex(UINT nIndex, IWICMetadataWriter * pIMetadataWriter)
+{
+    TRACE2("(%d, %p)\n", nIndex, pIMetadataWriter);
+    if (pIMetadataWriter == nullptr)
+        return E_INVALIDARG;
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    metadataWriter_[nIndex].reset(pIMetadataWriter);
+    return S_OK;
+}
+
+HRESULT EncodeFrame::MetadataBlockWriter::RemoveWriterByIndex(UINT nIndex)
+{
+    TRACE1("(%d)\n", nIndex);
+    if (nIndex >= metadataWriter_.size())
+        return E_INVALIDARG;
+    //metadataWriter_.erase(metadataWriter_.begin() + nIndex);
+    return S_OK;
+}
+
+HRESULT  EncodeFrame::MetadataBlockWriter::GetMetadatas(std::deque<std::shared_ptr<Metadata>>& metadatas)
+{
     for (int i = 0; i < metadataWriter_.size(); ++i) {
         std::string metadataName;
         GUID metadataFormat;
@@ -407,150 +561,5 @@ HRESULT EncodeFrame::Commit(void)
             }
         }
     }
-
-    HRESULT result = container_->AddImage(frame_, animation_information_, metadatas);
-    frame_.reset();
-    return result;
-}
-
-HRESULT EncodeFrame::GetMetadataQueryWriter(IWICMetadataQueryWriter ** ppIMetadataQueryWriter)
-{
-    TRACE1("(%p)\n", ppIMetadataQueryWriter);
-    if (ppIMetadataQueryWriter == nullptr)
-        return E_INVALIDARG;
-
-    HRESULT result;
-
-    //Create factory
-    ComPtr<IWICImagingFactory> factory;
-    result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
-    if (FAILED(result)) {
-        return result;
-    }
-    ComPtr<IWICComponentFactory> componentFactory;
-    result = factory->QueryInterface(componentFactory.get_out_storage());
-    if (FAILED(result)) {
-        return result;
-    }
-
-    return  componentFactory->CreateQueryWriterFromBlockWriter(static_cast<IWICMetadataBlockWriter*>(this), ppIMetadataQueryWriter);
-}
-
-HRESULT EncodeFrame::GetContainerFormat(GUID * pguidContainerFormat)
-{
-    TRACE1("(%p)\n", pguidContainerFormat);
-    if (pguidContainerFormat == nullptr)
-        return E_INVALIDARG;
-    *pguidContainerFormat = GUID_ContainerFormatFLIF;
     return S_OK;
 }
-
-HRESULT EncodeFrame::GetCount(UINT * pcCount)
-{
-    TRACE1("(%p)\n", pcCount);
-    if (pcCount == nullptr)
-        return E_INVALIDARG;
-    *pcCount = metadataWriter_.size();
-    return S_OK;
-}
-
-HRESULT EncodeFrame::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
-{
-    TRACE1("(%p)\n", ppIEnumMetadata);
-    return E_NOTIMPL;
-}
-
-HRESULT EncodeFrame::InitializeFromBlockReader(IWICMetadataBlockReader * pIMDBlockReader)
-{
-    TRACE1("(%p)\n", pIMDBlockReader);
-    if (pIMDBlockReader == nullptr)
-        return E_INVALIDARG;
-
-    HRESULT result;
-
-    UINT blockCount = 0;
-    result = pIMDBlockReader->GetCount(&blockCount);
-    if (FAILED(result))
-        return result;
-
-    if (blockCount > 0)
-    {
-        //Create factory
-        ComPtr<IWICImagingFactory> factory;
-        result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (LPVOID*)factory.get_out_storage());
-        if (FAILED(result)) {
-            return result;
-        }
-        ComPtr<IWICComponentFactory> componentFactory;
-        result = factory->QueryInterface(componentFactory.get_out_storage());
-        if (FAILED(result)) {
-            return result;
-        }
-
-        for (UINT i = 0; i < blockCount; ++i)
-        {
-            IWICMetadataReader* metadataReader;
-            if (SUCCEEDED(pIMDBlockReader->GetReaderByIndex(i, &metadataReader)))
-            {
-                ComPtr<IWICMetadataWriter> metadataWriter;
-                if (SUCCEEDED(componentFactory->CreateMetadataWriterFromReader(metadataReader, NULL, metadataWriter.get_out_storage())))
-                {
-                    metadataWriter_.emplace_back(metadataWriter.new_ref());
-                }
-            }
-        }
-    }
-    return S_OK;
-}
-
-HRESULT EncodeFrame::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader)
-{
-    TRACE2("(%d, %p)\n", nIndex, ppIMetadataReader);
-    if (ppIMetadataReader == nullptr)
-        return E_INVALIDARG;
-    if (nIndex >= metadataWriter_.size())
-        return E_INVALIDARG;
-    *ppIMetadataReader = static_cast<IWICMetadataReader*>(metadataWriter_[nIndex].new_ref());
-    return S_OK;
-}
-
-HRESULT EncodeFrame::GetWriterByIndex(UINT nIndex, IWICMetadataWriter ** ppIMetadataWriter)
-{
-    TRACE2("(%d, %p)\n", nIndex, ppIMetadataWriter);
-    if (ppIMetadataWriter == nullptr)
-        return E_INVALIDARG;
-    if (nIndex >= metadataWriter_.size())
-        return E_INVALIDARG;
-    *ppIMetadataWriter = metadataWriter_[nIndex].new_ref();
-    return S_OK;
-}
-
-HRESULT EncodeFrame::AddWriter(IWICMetadataWriter * pIMetadataWriter)
-{
-    TRACE1("(%p)\n", pIMetadataWriter);
-    if (pIMetadataWriter == nullptr)
-        return E_INVALIDARG;
-    metadataWriter_.emplace_back(pIMetadataWriter);
-    return S_OK;
-}
-
-HRESULT EncodeFrame::SetWriterByIndex(UINT nIndex, IWICMetadataWriter * pIMetadataWriter)
-{
-    TRACE2("(%d, %p)\n", nIndex, pIMetadataWriter);
-    if (pIMetadataWriter == nullptr)
-        return E_INVALIDARG;
-    if (nIndex >= metadataWriter_.size())
-        return E_INVALIDARG;
-    metadataWriter_[nIndex].reset(pIMetadataWriter);
-    return S_OK;
-}
-
-HRESULT EncodeFrame::RemoveWriterByIndex(UINT nIndex)
-{
-    TRACE1("(%d)\n", nIndex);
-    if (nIndex >= metadataWriter_.size())
-        return E_INVALIDARG;
-    //metadataWriter_.erase(metadataWriter_.begin() + nIndex);
-    return S_OK;
-}
-

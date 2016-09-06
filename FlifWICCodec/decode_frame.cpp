@@ -238,6 +238,7 @@ HRESULT DecodeFrame::GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMeta
 
 HRESULT DecodeFrame::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
 {
+    TRACE1("(%p)\n", ppIEnumMetadata);
     return E_NOTIMPL;
 }
 

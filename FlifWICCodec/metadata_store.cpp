@@ -74,6 +74,7 @@ HRESULT MetadataStore::GetAt(DWORD iProp, PROPERTYKEY * pkey)
     if (pkey == nullptr)
         return E_INVALIDARG;
 
+    *pkey = PKEY_Null;
     if (iProp >= metadata_.size())
         return E_INVALIDARG;
 
@@ -105,6 +106,7 @@ HRESULT MetadataStore::SetValue(REFPROPERTYKEY key, REFPROPVARIANT propvar)
 
 HRESULT MetadataStore::Commit(void)
 {
+    TRACE("()\n");
     return S_OK;
 }
 
@@ -220,5 +222,6 @@ HRESULT MetadataStore::NamedPropertyStore::GetNameAt(DWORD iProp, BSTR * pbstrNa
 
 HRESULT MetadataStore::PropertyStoreCapabilities::IsPropertyWritable(REFPROPERTYKEY key)
 {
+    TRACE1("(%s)\n", debugstr_guid(key.fmtid));
     return S_FALSE;
 }

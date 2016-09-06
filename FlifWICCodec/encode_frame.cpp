@@ -456,6 +456,7 @@ HRESULT EncodeFrame::GetCount(UINT * pcCount)
 
 HRESULT EncodeFrame::GetEnumerator(IEnumUnknown ** ppIEnumMetadata)
 {
+    TRACE1("(%p)\n", ppIEnumMetadata);
     return E_NOTIMPL;
 }
 

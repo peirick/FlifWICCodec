@@ -20,9 +20,10 @@ SupportedMetadata supported_metadatas[] = {
     { PKEY_Copyright,                 L"System.Copyright",            L"/xmp/dc:rights",          false  },
     { PKEY_Author,                    L"System.Author",               L"/xmp/<xmpseq>dc:creator", false  },
     { PKEY_Subject,                   L"System.Subject",              L"/ifd/{ushort=40095}	",    false  },
-    //{ PKEY_Image_BitDepth,            nullptr,                nullptr,                             false },
-    //{ PKEY_Image_HorizontalSize,      nullptr,                nullptr,                             false },
-    //{ PKEY_Image_VerticalSize,        nullptr,                nullptr,                             false },
+    { PKEY_Image_BitDepth,            nullptr,                nullptr,                            false  },
+    { PKEY_Image_HorizontalSize,      nullptr,                nullptr,                            false  },
+    { PKEY_Image_VerticalSize,        nullptr,                nullptr,                            false  },
+    { PKEY_Image_Dimensions,          nullptr,                nullptr,                            false  },
     { PKEY_Rating,                    L"System.Rating",                   L"/xmp/xmp:Rating",     false  },
     { PKEY_Photo_CameraModel,         L"System.Photo.CameraModel",        L"/xmp/tiff:Model",     false  },
     { PKEY_Photo_CameraManufacturer,  L"System.Photo.CameraManufacturer", L"/xmp/tiff:make",      false  },
@@ -116,17 +117,42 @@ HRESULT MetadataStore::InitializeWithStream::Initialize(IStream * pstream, DWORD
     if (FAILED(result))
         return result;
 
+    PROPVARIANT propvar;
+    PropVariantInit(&propvar);
+
+    // bitdepth
+    InitPropVariantFromUInt32(container.GetBitDepth(), &propvar);
+    metadataStore_.propertyStoreCache_->SetValueAndState(PKEY_Image_BitDepth, &propvar, PSC_NORMAL);
+    PropVariantClear(&propvar);
+
+    // width
+    ULONG width = container.GetWidth();
+    InitPropVariantFromUInt32(width, &propvar);
+    metadataStore_.propertyStoreCache_->SetValueAndState(PKEY_Image_HorizontalSize, &propvar, PSC_NORMAL);
+    PropVariantClear(&propvar);
+
+    // height
+    ULONG height = container.GetHeight();
+    InitPropVariantFromUInt32(height, &propvar);
+    metadataStore_.propertyStoreCache_->SetValueAndState(PKEY_Image_VerticalSize, &propvar, PSC_NORMAL);
+    PropVariantClear(&propvar);
+
+    // dimensions
+    WCHAR buffer[64] = {};
+    swprintf_s(buffer, L"%u \u00D7 %u", width, height);
+    InitPropVariantFromString(buffer, &propvar);
+    metadataStore_.propertyStoreCache_->SetValueAndState(PKEY_Image_Dimensions, &propvar, PSC_NORMAL);
+    PropVariantClear(&propvar);
+
+
     ComPtr<IWICMetadataQueryReader> queryReader;
     result = container.GetMetadataQueryReader(queryReader.get_out_storage());
     if (FAILED(result))
         return result;
-
     for (const SupportedMetadata& supportedMetadata : supported_metadatas)
     {
         if (supportedMetadata.photoMetadataPolicy)
         {
-            PROPVARIANT propvar;
-            PropVariantInit(&propvar);
             if (SUCCEEDED(queryReader->GetMetadataByName(supportedMetadata.photoMetadataPolicy, &propvar))
                 && (propvar.vt != VT_EMPTY))
             {

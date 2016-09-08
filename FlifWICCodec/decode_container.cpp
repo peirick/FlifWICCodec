@@ -6,7 +6,7 @@
 #include "decode_frame.h"
 
 DecodeContainer::DecodeContainer()
-    : has_been_decoded_(false), decoder_(nullptr)
+    : has_been_decoded_(false), decoder_(nullptr), info_(nullptr)
 {
     TRACE("()\n");
     InitializeCriticalSection(&cs_);
@@ -15,11 +15,14 @@ DecodeContainer::DecodeContainer()
 DecodeContainer::~DecodeContainer()
 {
     TRACE("()\n");
+    if (info_) {
+        flif_destroy_info(info_);
+        info_ = nullptr;
+    }
     if (decoder_) {
         flif_destroy_decoder(decoder_);
         decoder_ = nullptr;
     }
-
 }
 
 HRESULT DecodeContainer::QueryInterface(REFIID riid, void** ppvObject) {
@@ -37,30 +40,30 @@ HRESULT DecodeContainer::QueryInterface(REFIID riid, void** ppvObject) {
     return S_OK;
 }
 
-HRESULT IsValidFLIF(IStream* pIStream) {
-    // read enough so WebPGetInfo can do basic validation.
-    const int kHeaderSize = 4;
-    char header[kHeaderSize];
+HRESULT DecodeContainer::ReadInfo(IStream* pIStream)
+{
+    const int header_size_bytes = 100;
+    uint8_t header[header_size_bytes];
     HRESULT ret;
     ULONG read;
 
     if (FAILED(ret = pIStream->Read(header, sizeof(header), &read)))
         return ret;
-    if (read < kHeaderSize) {
-        TRACE("Read error\n");
-        return E_UNEXPECTED;
-    }
 
-    if (strncmp(header, "FLIF", 4)) {
-        TRACE("Not a FLIF file\n");
-        return WINCODEC_ERR_BADIMAGE;
+    if (info_) {
+        flif_destroy_info(info_);
+        info_ = nullptr;
+    }
+    info_ = flif_read_info_from_memory(header, read);
+    if (!info_) {
+        return WINCODEC_ERR_BADHEADER;
     }
 
     // reset pIStream
-    LARGE_INTEGER offset;
-    offset.QuadPart = -kHeaderSize;
-    ret = pIStream->Seek(offset, STREAM_SEEK_CUR, nullptr);
-    return ret;
+    LARGE_INTEGER zero;
+    zero.QuadPart = 0;
+    pIStream->Seek(zero, STREAM_SEEK_SET, nullptr);
+    return S_OK;
 }
 
 HRESULT DecodeContainer::QueryCapability(IStream* pIStream, DWORD* pdwCapability) {
@@ -68,7 +71,7 @@ HRESULT DecodeContainer::QueryCapability(IStream* pIStream, DWORD* pdwCapability
     if (pdwCapability == nullptr)
         return E_INVALIDARG;
 
-    HRESULT ret = IsValidFLIF(pIStream);
+    HRESULT ret = ReadInfo(pIStream);
     if (ret == WINCODEC_ERR_BADHEADER)
         return WINCODEC_ERR_WRONGSTATE;  // That's what Win7 jpeg codec returns.
 
@@ -87,20 +90,18 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
     if (pIStream == nullptr)
         return E_INVALIDARG;
 
+    SectionLock l(&cs_);
+
     HRESULT ret;
-    ret = IsValidFLIF(pIStream);
+    ret = ReadInfo(pIStream);
     if (FAILED(ret)) {
         return ret;
     }
 
-    {
-        SectionLock l(&cs_);
-        if (has_been_decoded_) {
-            has_been_decoded_ = false;
-            frames_.clear();
-        }
+    if (has_been_decoded_) {
+        has_been_decoded_ = false;
+        frames_.clear();
     }
-
     // Save stream for later use
     return pIStream->QueryInterface(stream_.get_out_storage());
 }
@@ -309,6 +310,21 @@ HRESULT DecodeContainer::GetFrame(UINT index, IWICBitmapFrameDecode** ppIBitmapF
     SectionLock l(&cs_);
     *ppIBitmapFrame = frames_[index].new_ref();
     return S_OK;
+}
+
+UINT DecodeContainer::GetWidth()
+{
+    return info_ ? flif_info_get_width(info_) : 0;
+}
+
+UINT DecodeContainer::GetHeight()
+{
+    return info_ ? flif_info_get_height(info_) : 0;
+}
+
+UINT DecodeContainer::GetBitDepth()
+{
+    return info_ ? flif_info_get_depth(info_) : 0;
 }
 
 

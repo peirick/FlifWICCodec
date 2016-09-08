@@ -26,18 +26,23 @@ public:
     HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail)override;
     HRESULT STDMETHODCALLTYPE GetFrameCount(UINT *pCount)override;
     HRESULT STDMETHODCALLTYPE GetFrame(UINT index, IWICBitmapFrameDecode **ppIBitmapFrame)override;
-
+public:
+    UINT GetWidth();
+    UINT GetHeight();
+    UINT GetBitDepth();
 private:
     // No copy and assign.
     DecodeContainer(const DecodeContainer&) = delete;
     void operator=(const DecodeContainer&) = delete;
     HRESULT InitializeFactory();
-
+    HRESULT ReadInfo(IStream * pIStream);
     HRESULT DecodeCached(bool onlyInfos);
     HRESULT Decode(bool onlyInfos);
     bool has_been_decoded_;
     bool has_only_infos_decoded_;
     HRESULT last_decode_desult;
+
+    FLIF_INFO* info_;
 
     FLIF_DECODER* decoder_;
     ComPtr<IStream> stream_;

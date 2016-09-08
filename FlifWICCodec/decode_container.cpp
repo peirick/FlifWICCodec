@@ -5,7 +5,8 @@
 #include "decode_container.h"
 #include "decode_frame.h"
 
-DecodeContainer::DecodeContainer() : decoder_(nullptr)
+DecodeContainer::DecodeContainer()
+    : has_been_decoded_(false), decoder_(nullptr)
 {
     TRACE("()\n");
     InitializeCriticalSection(&cs_);
@@ -18,6 +19,7 @@ DecodeContainer::~DecodeContainer()
         flif_destroy_decoder(decoder_);
         decoder_ = nullptr;
     }
+
 }
 
 HRESULT DecodeContainer::QueryInterface(REFIID riid, void** ppvObject) {
@@ -74,7 +76,7 @@ HRESULT DecodeContainer::QueryCapability(IStream* pIStream, DWORD* pdwCapability
         *pdwCapability =
         WICBitmapDecoderCapabilityCanDecodeSomeImages
         | WICBitmapDecoderCapabilityCanDecodeAllImages
-        | WICBitmapDecoderCapabilityCanDecodeThumbnail
+        //| WICBitmapDecoderCapabilityCanDecodeThumbnail
         | WICBitmapDecoderCapabilityCanEnumerateMetadata;
     return ret;
 }
@@ -91,12 +93,40 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
         return ret;
     }
 
+    {
+        SectionLock l(&cs_);
+        if (has_been_decoded_) {
+            has_been_decoded_ = false;
+            frames_.clear();
+        }
+    }
+
+    // Save stream for later use
+    return pIStream->QueryInterface(stream_.get_out_storage());
+}
+
+HRESULT DecodeContainer::DecodeCached(bool decode_only_infos)
+{
     SectionLock l(&cs_);
+    if (!has_been_decoded_
+        || (decode_only_infos == false && has_only_infos_decoded_))
+    {
+        last_decode_desult = Decode(decode_only_infos);
+        has_been_decoded_ = true;
+        has_only_infos_decoded_ = decode_only_infos;
+    }
+    return last_decode_desult;
+}
 
-    frames_.clear();
+HRESULT DecodeContainer::Decode(bool onlyInfos)
+{
+    //Todo: Cleanup code
+    if (stream_.get() == nullptr)
+        return WINCODEC_ERR_NOTINITIALIZED;
 
+    HRESULT ret;
     STATSTG stats;
-    ret = pIStream->Stat(&stats, STATFLAG_NONAME);
+    ret = stream_->Stat(&stats, STATFLAG_NONAME);
     if (FAILED(ret))
         return ret;
     ULONG stream_size = stats.cbSize.QuadPart;
@@ -108,11 +138,11 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
 
     LARGE_INTEGER zero;
     zero.QuadPart = 0;
-    ret = pIStream->Seek(zero, STREAM_SEEK_SET, nullptr);
+    ret = stream_->Seek(zero, STREAM_SEEK_SET, nullptr);
     if (FAILED(ret))
         return ret;
 
-    ret = pIStream->Read(file_data.get(), stream_size, &bytes_read);
+    ret = stream_->Read(file_data.get(), stream_size, &bytes_read);
     TRACE1("bytes_read %d\n", bytes_read);
     if (FAILED(ret)) {
         TRACE("pIStream->Read failed\n");
@@ -123,22 +153,31 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
         return WINCODEC_ERR_WRONGSTATE;
     }
 
-    if (decoder_) {
-        flif_destroy_decoder(decoder_);
-        decoder_ = nullptr;
+    if (!decoder_) {
+        decoder_ = flif_create_decoder();
     }
-    decoder_ = flif_create_decoder();
+
+    if (onlyInfos) {
+        flif_decoder_set_scale(decoder_, -2);
+    }
+    else {
+        flif_decoder_set_scale(decoder_, 1);
+    }
+
     if (flif_decoder_decode_memory(decoder_, file_data.get(), bytes_read) != 0)
     {
         size_t num_images = flif_decoder_num_images(decoder_);
         frames_.resize(num_images);
         for (int i = 0; i < num_images; ++i) {
             FLIF_IMAGE* image = flif_decoder_get_image(decoder_, i);
-            if (image) {
-                ComPtr<DecodeFrame> frame(new (std::nothrow) DecodeFrame(image));
-                if (frame.get() == nullptr)
-                    return E_OUTOFMEMORY;
-                frames_[i].reset(frame.new_ref());
+            if (image)
+            {
+                if (frames_[i].get() == nullptr) {
+                    frames_[i].reset(new (std::nothrow) DecodeFrame());
+                    if (frames_[i].get() == nullptr)
+                        return E_OUTOFMEMORY;
+                }
+                frames_[i]->SetFlifImage(image);
             }
             else {
                 frames_[i].reset(nullptr);
@@ -149,7 +188,6 @@ HRESULT DecodeContainer::Initialize(IStream* pIStream, WICDecodeOptions cacheOpt
         TRACE("decode failed\n");
         ret = WINCODEC_ERR_WRONGSTATE;
     }
-
     if (FAILED(ret))
         return ret;
     return S_OK;
@@ -206,8 +244,10 @@ HRESULT DecodeContainer::GetMetadataQueryReader(IWICMetadataQueryReader** ppIMet
     TRACE1("(%p)\n", ppIMetadataQueryReader);
     if (ppIMetadataQueryReader == nullptr)
         return E_INVALIDARG;
-    if (frames_.size() == 0)
-        return WINCODEC_ERR_NOTINITIALIZED;
+
+    HRESULT result = DecodeCached(true);
+    if (FAILED(result))
+        return result;
 
     return frames_[0].get()->GetMetadataQueryReader(ppIMetadataQueryReader);
 }
@@ -216,8 +256,11 @@ HRESULT DecodeContainer::GetPreview(IWICBitmapSource** ppIBitmapSource) {
     TRACE1("(%p)\n", ppIBitmapSource);
     if (ppIBitmapSource == nullptr)
         return E_INVALIDARG;
-    if (decoder_ == nullptr)
-        return WINCODEC_ERR_NOTINITIALIZED;
+
+    HRESULT result = DecodeCached(false);
+    if (FAILED(result))
+        return result;
+
     *ppIBitmapSource = frames_[0].new_ref();
     return S_OK;
 }
@@ -232,8 +275,11 @@ HRESULT DecodeContainer::GetThumbnail(IWICBitmapSource** ppIThumbnail)
     TRACE1("(%p)\n", ppIThumbnail);
     if (ppIThumbnail == nullptr)
         return E_INVALIDARG;
-    if (decoder_ == nullptr)
-        return WINCODEC_ERR_NOTINITIALIZED;
+
+    HRESULT result = DecodeCached(false);
+    if (FAILED(result))
+        return result;
+
     *ppIThumbnail = frames_[0].new_ref();
     return S_OK;
 }
@@ -242,9 +288,11 @@ HRESULT DecodeContainer::GetFrameCount(UINT* pCount) {
     TRACE1("(%p)\n", pCount);
     if (pCount == nullptr)
         return E_INVALIDARG;
-    if (decoder_ == nullptr) {
-        return WINCODEC_ERR_NOTINITIALIZED;
-    }
+
+    HRESULT result = DecodeCached(true);
+    if (FAILED(result))
+        return result;
+
     *pCount = frames_.size();
     return S_OK;
 }
@@ -254,16 +302,15 @@ HRESULT DecodeContainer::GetFrame(UINT index, IWICBitmapFrameDecode** ppIBitmapF
     if (ppIBitmapFrame == nullptr)
         return E_INVALIDARG;
 
-    if (decoder_ == nullptr) {
-        return WINCODEC_ERR_NOTINITIALIZED;
-    }
-
-    if (index >= frames_.size())
-        return WINCODEC_ERR_FRAMEMISSING;
+    HRESULT result = DecodeCached(false);
+    if (FAILED(result))
+        return result;
 
     SectionLock l(&cs_);
     *ppIBitmapFrame = frames_[index].new_ref();
     return S_OK;
 }
+
+
 
 

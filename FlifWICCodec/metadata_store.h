@@ -26,7 +26,8 @@ private:
     class InitializeWithStream : public IInitializeWithStream
     {
     public:
-        InitializeWithStream(MetadataStore& metadataStore) : metadataStore_(metadataStore) {}
+        InitializeWithStream(MetadataStore& metadataStore) : metadataStore_(metadataStore) { InitializeCriticalSection(&cs_); }
+        ~InitializeWithStream() { DeleteCriticalSection(&cs_); }
         // Inherited via IUnknown:
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override { return metadataStore_.QueryInterface(riid, ppvObject); };
         ULONG STDMETHODCALLTYPE AddRef() override { return metadataStore_.AddRef(); }
@@ -35,6 +36,7 @@ private:
         HRESULT STDMETHODCALLTYPE Initialize(IStream * pstream, DWORD grfMode) override;
     private:
         MetadataStore& metadataStore_;
+        CRITICAL_SECTION cs_;
     };
 
     class PropertyStoreCapabilities : public IPropertyStoreCapabilities
@@ -51,15 +53,7 @@ private:
         MetadataStore& metadataStore_;
     };
 
-    struct PropertyData {
-        PROPERTYKEY key;
-        PROPVARIANT value;
-        LPCWSTR name;
-
-        PropertyData(PROPERTYKEY k, PROPVARIANT v, LPCWSTR n) : key(k), value(v), name(n) {}
-    };
-
-    std::vector<PropertyData> metadata_;
-    InitializeWithStream initializeWithStream_;
-    PropertyStoreCapabilities propertyStoreCapabilities_;
+    ComPtr<IPropertyStoreCache> propertyStoreCache_;
+    InitializeWithStream        initializeWithStream_;
+    PropertyStoreCapabilities   propertyStoreCapabilities_;
 };

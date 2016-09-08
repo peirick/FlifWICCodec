@@ -1,7 +1,32 @@
-#include "metadata_store.h"
 #include <propsys.h>
 #include <Propvarutil.h>
 #include <comutil.h>
+#include "metadata_store.h"
+#include "decode_frame.h"
+
+
+struct SupportedMetadata {
+    const PROPERTYKEY& key;
+    LPCWSTR            photoMetadataPolicy;
+    LPCWSTR            wicMetadataQuery;
+    const bool         isWritable;
+};
+
+static const
+SupportedMetadata supported_metadatas[] = {
+    // Using "Photo Metadata Policies" of Jpeg container. 
+    // See also DecodeFrame::MetadataBlockReader::GetContainerFormat
+    { PKEY_Title,                     L"System.Title",                L"/xmp/dc:title",           false  },
+    { PKEY_Copyright,                 L"System.Copyright",            L"/xmp/dc:rights",          false  },
+    { PKEY_Author,                    L"System.Author",               L"/xmp/<xmpseq>dc:creator", false  },
+    { PKEY_Subject,                   L"System.Subject",              L"/ifd/{ushort=40095}	",    false  },
+    //{ PKEY_Image_BitDepth,            nullptr,                nullptr,                             false },
+    //{ PKEY_Image_HorizontalSize,      nullptr,                nullptr,                             false },
+    //{ PKEY_Image_VerticalSize,        nullptr,                nullptr,                             false },
+    { PKEY_Rating,                    L"System.Rating",                   L"/xmp/xmp:Rating",     false  },
+    { PKEY_Photo_CameraModel,         L"System.Photo.CameraModel",        L"/xmp/tiff:Model",     false  },
+    { PKEY_Photo_CameraManufacturer,  L"System.Photo.CameraManufacturer", L"/xmp/tiff:make",      false  },
+};
 
 MetadataStore::MetadataStore()
     : initializeWithStream_(*this)
@@ -51,46 +76,25 @@ HRESULT MetadataStore::QueryInterface(REFIID riid, void ** ppvObject)
 HRESULT MetadataStore::GetCount(DWORD * cProps)
 {
     TRACE1("(%p)\n", cProps);
-    if (cProps == nullptr)
-        return E_INVALIDARG;
-    *cProps = metadata_.size();
-    return S_OK;
+    return propertyStoreCache_.get() ? propertyStoreCache_->GetCount(cProps) : E_UNEXPECTED;
 }
 
 HRESULT MetadataStore::GetAt(DWORD iProp, PROPERTYKEY * pkey)
 {
     TRACE2("(%d %p)\n", iProp, pkey);
-    if (pkey == nullptr)
-        return E_INVALIDARG;
-
-    *pkey = PKEY_Null;
-    if (iProp >= metadata_.size())
-        return E_INVALIDARG;
-
-    *pkey = metadata_[iProp].key;
-    return S_OK;
+    return  propertyStoreCache_.get() ? propertyStoreCache_->GetAt(iProp, pkey) : E_UNEXPECTED;
 }
 
 HRESULT MetadataStore::GetValue(REFPROPERTYKEY key, PROPVARIANT * pv)
 {
     TRACE2("(%s, %p)\n", debugstr_guid(key.fmtid), pv);
-    if (pv == nullptr)
-        return E_INVALIDARG;
-
-    PropVariantClear(pv);
-    for (const PropertyData& data : metadata_) {
-        if (data.key == key) {
-            PropVariantCopy(pv, &data.value);
-            break;
-        }
-    }
-    return S_OK;
+    return  propertyStoreCache_.get() ? propertyStoreCache_->GetValue(key, pv) : E_UNEXPECTED;
 }
 
 HRESULT MetadataStore::SetValue(REFPROPERTYKEY key, REFPROPVARIANT propvar)
 {
     TRACE2("(%s, %ls)\n", debugstr_guid(key.fmtid), debugstr_var(propvar));
-    return S_OK;
+    return propertyStoreCache_.get() ? propertyStoreCache_->SetValue(key, propvar) : E_UNEXPECTED;
 }
 
 HRESULT MetadataStore::Commit(void)
@@ -102,61 +106,49 @@ HRESULT MetadataStore::Commit(void)
 HRESULT MetadataStore::InitializeWithStream::Initialize(IStream * pstream, DWORD grfMode)
 {
     TRACE2("(%p, %d)\n", pstream, grfMode);
-    HRESULT result = S_OK;
-    //DecodeContainer decodeContainer;
-    //result = decodeContainer.Initialize(pstream, WICDecodeMetadataCacheOnDemand);
-    //if (FAILED(result))
-    //    return result;
-    //ComPtr<IWICMetadataQueryReader> queryReader;
-    //result = decodeContainer.GetMetadataQueryReader(queryReader.get_out_storage());
-    //if (FAILED(result))
-    //    return result;
-    //queryReader->GetMetadataByName(A, &propvar);
+    HRESULT result;
+    result = PSCreateMemoryPropertyStore(IID_PPV_ARGS(metadataStore_.propertyStoreCache_.get_out_storage()));
+    if (FAILED(result))
+        return result;
 
-    //PSCreateMemoryPropertyStore(IID_PPV_ARGS(metadataStore_.metadata_.get_out_storage()));
+    DecodeContainer container;
+    result = container.Initialize(pstream, WICDecodeMetadataCacheOnDemand);
+    if (FAILED(result))
+        return result;
 
-    PROPVARIANT propvar;
-    PropVariantInit(&propvar);
+    ComPtr<IWICMetadataQueryReader> queryReader;
+    result = container.GetMetadataQueryReader(queryReader.get_out_storage());
+    if (FAILED(result))
+        return result;
 
-#define ReadAndAdd(A, B)                                         \
-        InitPropVariantFromString(A, &propvar);                  \
-        metadataStore_.metadata_.emplace_back(B, propvar, A);    \
-        PropVariantClear(&propvar);
-
-
-    //ReadAndAdd(L"", PKEY_Photo_Aperture)
-    //    ReadAndAdd(L"", PKEY_Photo_ApertureDenominator)
-    //    ReadAndAdd(L"", PKEY_Photo_ApertureNumerator)
-    //    ReadAndAdd(L"", PKEY_Photo_Brightness)
-    //    ReadAndAdd(L"", PKEY_Photo_BrightnessDenominator)
-    //    ReadAndAdd(L"", PKEY_Photo_BrightnessNumerator)
-    ReadAndAdd(L"PKEY_Photo_CameraManufacturer", PKEY_Photo_CameraManufacturer);
-    ReadAndAdd(L"PKEY_Photo_CameraManufacturer", PKEY_Photo_CameraModel);
-    //    ReadAndAdd(L"", PKEY_Photo_CameraSerialNumber)
-    //    ReadAndAdd(L"", PKEY_Photo_Contrast)
-    //    ReadAndAdd(L"", PKEY_Photo_ContrastText)
-    //    ReadAndAdd(L"", PKEY_Photo_DateTaken)
-    //    ReadAndAdd(L"", PKEY_Photo_DigitalZoom)
-    //    ReadAndAdd(L"", PKEY_Photo_DigitalZoomDenominator)
-    //    ReadAndAdd(L"", PKEY_Photo_DigitalZoomNumerator)
-    //    ReadAndAdd(L"", PKEY_Photo_Event)
-    //    ReadAndAdd(L"", PKEY_Photo_EXIFVersion)
-    //    ReadAndAdd(L"", PKEY_Photo_ExposureBias)
-    //    ReadAndAdd(L"", PKEY_Photo_ExposureBiasDenominator)
-    //    ReadAndAdd(L"", PKEY_Photo_ExposureBiasNumerator)
-    //    ReadAndAdd(L"", PKEY_Photo_ExposureIndex)
-    //    ReadAndAdd(L"", PKEY_Photo_ExposureIndexDenominator)
-    //    ReadAndAdd(L"", PKEY_Photo_ExposureIndexNumerator)
-
-
-#undef ReadAndAdd
-
-
-    return result;
+    for (const SupportedMetadata& supportedMetadata : supported_metadatas)
+    {
+        if (supportedMetadata.photoMetadataPolicy)
+        {
+            PROPVARIANT propvar;
+            PropVariantInit(&propvar);
+            if (SUCCEEDED(queryReader->GetMetadataByName(supportedMetadata.photoMetadataPolicy, &propvar))
+                && (propvar.vt != VT_EMPTY))
+            {
+                result = metadataStore_.propertyStoreCache_->SetValueAndState(supportedMetadata.key, &propvar, PSC_NORMAL);
+            }
+            PropVariantClear(&propvar);
+        }
+    }
+    return S_OK;
 }
 
 HRESULT MetadataStore::PropertyStoreCapabilities::IsPropertyWritable(REFPROPERTYKEY key)
 {
     TRACE1("(%s)\n", debugstr_guid(key.fmtid));
+    for (const SupportedMetadata& supportedMetadata : supported_metadatas)
+    {
+        if (IsEqualGUID(supportedMetadata.key.fmtid, key.fmtid))
+        {
+            return supportedMetadata.isWritable
+                ? S_OK
+                : S_FALSE;
+        }
+    }
     return S_FALSE;
 }

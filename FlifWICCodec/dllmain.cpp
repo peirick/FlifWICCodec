@@ -76,7 +76,8 @@ WCHAR *debugstr_var(REFPROPVARIANT var)
     static WCHAR buf[32][128];
     static int pos = 0;
     pos %= 32;
-    if (SUCCEEDED(PropVariantToString(var, buf[pos], ARRAYSIZE(buf[pos]))))
+    HRESULT result = PropVariantToString(var, buf[pos], ARRAYSIZE(buf[pos]));
+    if (SUCCEEDED(result) || result == STRSAFE_E_INSUFFICIENT_BUFFER)
     {
         return buf[pos++];
     }
@@ -84,9 +85,6 @@ WCHAR *debugstr_var(REFPROPVARIANT var)
         return L"error";
     }
 }
-
-
-
 #endif
 
 // Object and server locks counters

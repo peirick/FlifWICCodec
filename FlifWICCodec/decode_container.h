@@ -26,13 +26,21 @@ public:
     HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail)override;
     HRESULT STDMETHODCALLTYPE GetFrameCount(UINT *pCount)override;
     HRESULT STDMETHODCALLTYPE GetFrame(UINT index, IWICBitmapFrameDecode **ppIBitmapFrame)override;
+
 private:
     // No copy and assign.
     DecodeContainer(const DecodeContainer&) = delete;
     void operator=(const DecodeContainer&) = delete;
     HRESULT InitializeFactory();
 
+    HRESULT DecodeCached(bool onlyInfos);
+    HRESULT Decode(bool onlyInfos);
+    bool has_been_decoded_;
+    bool has_only_infos_decoded_;
+    HRESULT last_decode_desult;
+
     FLIF_DECODER* decoder_;
+    ComPtr<IStream> stream_;
     std::deque<ComPtr<DecodeFrame>> frames_;
     ComPtr<IWICImagingFactory> factory_;
     CRITICAL_SECTION cs_;

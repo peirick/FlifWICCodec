@@ -9,7 +9,7 @@
 
 class DecodeFrame : public ComObjectBase<IWICBitmapFrameDecode> {
 public:
-    explicit DecodeFrame(FLIF_IMAGE* image);
+    DecodeFrame();
     ~DecodeFrame();
     // Inherited via IUnknown:
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override;
@@ -26,6 +26,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) override;
     HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail) override;
 
+    void SetFlifImage(FLIF_IMAGE* image);
 private:
 
     class MetadataBlockReader : public IWICMetadataBlockReader {
@@ -41,8 +42,10 @@ private:
         HRESULT STDMETHODCALLTYPE GetReaderByIndex(UINT nIndex, IWICMetadataReader ** ppIMetadataReader) override;
         HRESULT STDMETHODCALLTYPE GetEnumerator(IEnumUnknown ** ppIEnumMetadata) override;
     private:
-        DecodeFrame& decodeFrame_;
+        void ReadAllMetadata();
         void ReadMetadata(GUID metadataFormat, const char* name);
+
+        DecodeFrame& decodeFrame_;
         std::deque<ComPtr<IWICMetadataReader>> metadataReader_;
     };
 
@@ -52,8 +55,8 @@ private:
     HRESULT InitializeFactory();
 
     CRITICAL_SECTION cs_;
-    FLIF_IMAGE*				   image_;
-    ComPtr<IWICImagingFactory> factory_;
+    ComPtr<IWICImagingFactory>   factory_;
     ComPtr<IWICComponentFactory> componentFactory_;
-    MetadataBlockReader        metadataBlockReader_;
+    MetadataBlockReader          metadataBlockReader_;
+    FLIF_IMAGE*				     image_;
 };

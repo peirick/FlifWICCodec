@@ -11,13 +11,18 @@
 #endif  // FLIF_DEBUG_LOGGING
 
 
-//const int kBytesPerPixel = 4;
 
-DecodeFrame::DecodeFrame(FLIF_IMAGE * image)
-    :image_(image), metadataBlockReader_(*this)
+DecodeFrame::DecodeFrame()
+    : metadataBlockReader_(*this)
 {
     TRACE("()\n");
     InitializeCriticalSection(&cs_);
+}
+
+void DecodeFrame::SetFlifImage(FLIF_IMAGE * image)
+{
+    SectionLock l(&cs_);
+    image_ = image;
 }
 
 DecodeFrame::~DecodeFrame()
@@ -67,16 +72,8 @@ HRESULT DecodeFrame::GetPixelFormat(WICPixelFormatGUID *pPixelFormat) {
     TRACE1("(%p)\n", pPixelFormat);
     if (pPixelFormat == nullptr)
         return E_INVALIDARG;
-    //uint8_t nb_channels = flif_image_get_nb_channels(image_);
     //if (nb_channels >= 4) {
     *pPixelFormat = GUID_WICPixelFormat32bppRGBA;
-    //}
-    //else if (nb_channels == 3) {
-    //	*pPixelFormat = GUID_WICPixelFormat24bppRGB;
-    //}
-    //else if (nb_channels == 1) {
-    //	*pPixelFormat = GUID_WICPixelFormat8bppGray;
-    //}
     return S_OK;
 }
 
@@ -168,6 +165,8 @@ HRESULT DecodeFrame::GetThumbnail(IWICBitmapSource **ppIThumbnail) {
     return WINCODEC_ERR_CODECNOTHUMBNAIL;
 }
 
+
+
 HRESULT DecodeFrame::InitializeFactory()
 {
     SectionLock l(&cs_);
@@ -198,32 +197,11 @@ HRESULT DecodeFrame::MetadataBlockReader::GetContainerFormat(GUID * pguidContain
     TRACE1("(%p)\n", pguidContainerFormat);
     if (pguidContainerFormat == nullptr)
         return E_INVALIDARG;
-    *pguidContainerFormat = GUID_ContainerFormatFLIF;
+    //Return container format of Jpeg so that "Photo Metadata Policies" will work.
+    //https://msdn.microsoft.com/en-us/library/windows/desktop/ee872003(v=vs.85).aspx
+    *pguidContainerFormat = GUID_ContainerFormatJpeg;
+    //*pguidContainerFormat = GUID_ContainerFormatFLIF;
     return S_OK;
-}
-
-void DecodeFrame::MetadataBlockReader::ReadMetadata(GUID metadataFormat, const char* name)
-{
-    uint8_t* data = nullptr;
-    size_t length = 0;
-    flif_image_get_metadata(decodeFrame_.image_, name, &data, &length);
-    if (data && length > 0)
-    {
-        //Create stream
-        ComPtr<IStream> stream(SHCreateMemStream(data, length));
-
-        //Create factory        
-        if (FAILED(decodeFrame_.InitializeFactory()))
-            return;
-
-        // Create reader of stream
-        ComPtr<IWICMetadataReader> reader;
-        if (FAILED(decodeFrame_.componentFactory_->CreateMetadataReader(metadataFormat, nullptr, WICPersistOptionDefault, stream.get(), reader.get_out_storage())))
-            return;
-
-        // Store Reader for later use
-        metadataReader_.emplace_back(reader.new_ref());
-    }
 }
 
 HRESULT DecodeFrame::MetadataBlockReader::GetCount(UINT * pcCount)
@@ -232,9 +210,14 @@ HRESULT DecodeFrame::MetadataBlockReader::GetCount(UINT * pcCount)
     if (pcCount == nullptr)
         return E_INVALIDARG;
 
-    ReadMetadata(GUID_MetadataFormatExif, "eXif");
-    ReadMetadata(GUID_MetadataFormatXMP, "eXmp");
-    ReadMetadata(GUID_MetadataFormatChunkiCCP, "iCCP");
+    HRESULT result;
+
+    //Create factory
+    result = decodeFrame_.InitializeFactory();
+    if (FAILED(result))
+        return result;
+
+    ReadAllMetadata();
     *pcCount = metadataReader_.size();
     return S_OK;
 }
@@ -256,4 +239,39 @@ HRESULT DecodeFrame::MetadataBlockReader::GetEnumerator(IEnumUnknown ** ppIEnumM
     TRACE1("(%p)\n", ppIEnumMetadata);
     return E_NOTIMPL;
 }
+
+void  DecodeFrame::MetadataBlockReader::ReadAllMetadata()
+{
+    TRACE("()\n");
+    ReadMetadata(GUID_MetadataFormatExif, "eXif");
+    ReadMetadata(GUID_MetadataFormatXMP, "eXmp");
+    ReadMetadata(GUID_MetadataFormatChunkiCCP, "iCCP");
+}
+
+void DecodeFrame::MetadataBlockReader::ReadMetadata(GUID metadataFormat, const char* name)
+{
+    TRACE("()\n");
+    uint8_t* data = nullptr;
+    size_t length = 0;
+    flif_image_get_metadata(decodeFrame_.image_, name, &data, &length);
+    if (data && length > 0)
+    {
+        //Create stream
+        ComPtr<IStream> stream(SHCreateMemStream(data, length));
+
+        // Create reader of stream
+        ComPtr<IWICMetadataReader> reader;
+        if (SUCCEEDED(decodeFrame_.componentFactory_->CreateMetadataReader(
+            metadataFormat,
+            nullptr,
+            WICPersistOptionDefault,
+            stream.get(),
+            reader.get_out_storage()))) {
+            // Store Reader for later use
+            metadataReader_.emplace_back(reader.new_ref());
+        }
+    }
+    flif_image_free_metadata(decodeFrame_.image_, data);
+}
+
 

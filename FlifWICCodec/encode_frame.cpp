@@ -528,54 +528,97 @@ HRESULT EncodeFrame::MetadataBlockWriter::RemoveWriterByIndex(UINT nIndex)
     return S_OK;
 }
 
-HRESULT  EncodeFrame::MetadataBlockWriter::GetMetadatas(std::deque<std::shared_ptr<Metadata>>& metadatas)
+
+static
+HRESULT SaveMetadata(IWICMetadataReader* reader,
+    const std::string metadataName,
+    std::deque<std::shared_ptr<Metadata>>& metadatas)
 {
-    for (int i = 0; i < metadataWriter_.size(); ++i) {
-        std::string metadataName;
-        GUID metadataFormat;
-        if (SUCCEEDED(metadataWriter_[i]->GetMetadataFormat(&metadataFormat)))
-        {
-            if (IsEqualGUID(metadataFormat, GUID_MetadataFormatExif))
-            {
-                metadataName = "eXif";
-            }
-            else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatXMP)) {
-                metadataName = "eXmp";
-            }
-            else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatChunkiCCP))
-            {
-                metadataName = "iCCP";
-            }
-            else {
-                continue;
-            }
+    ComPtr<IWICPersistStream> persistStream;
+    if (SUCCEEDED(reader->QueryInterface(persistStream.get_out_storage())))
+    {
+        IStream* stream = SHCreateMemStream(NULL, 0);
+        if (SUCCEEDED(persistStream->SaveEx(stream, WICMetadataCreationAllowUnknown | WICPersistOptionDefault, FALSE))) {
+            // Allocates enough memeory for the content.
+            STATSTG ssStreamData = {};
+            if (SUCCEEDED(stream->Stat(&ssStreamData, STATFLAG_NONAME))) {
+                SIZE_T cbSize = ssStreamData.cbSize.LowPart;
+                std::shared_ptr<Metadata> metadata(new (std::nothrow) Metadata(metadataName, cbSize));
+                if (!metadata->Buffer)
+                    return E_OUTOFMEMORY;
 
-            ComPtr<IWICPersistStream> persistStream;
-            if (SUCCEEDED(metadataWriter_[i]->QueryInterface(persistStream.get_out_storage())))
-            {
-                IStream* stream = SHCreateMemStream(NULL, 0);
-                if (SUCCEEDED(persistStream->SaveEx(stream, WICMetadataCreationAllowUnknown | WICPersistOptionDefault, FALSE))) {
-                    // Allocates enough memeory for the content.
-                    STATSTG ssStreamData = {};
-                    if (SUCCEEDED(stream->Stat(&ssStreamData, STATFLAG_NONAME))) {
-                        SIZE_T cbSize = ssStreamData.cbSize.LowPart;
-                        std::shared_ptr<Metadata> metadata(new (std::nothrow) Metadata(metadataName, cbSize));
-                        if (!metadata->Buffer)
-                            return E_OUTOFMEMORY;
-
-                        // Copies the content from the stream to the buffer.
-                        LARGE_INTEGER position;
-                        position.QuadPart = 0;
-                        if (SUCCEEDED((stream->Seek(position, STREAM_SEEK_SET, NULL)))) {
-                            ULONG cbRead;
-                            if (SUCCEEDED(stream->Read(metadata->Buffer, cbSize, &cbRead))) {
-                                metadatas.emplace_back(metadata);
-                            }
-                        }
+                // Copies the content from the stream to the buffer.
+                LARGE_INTEGER position;
+                position.QuadPart = 0;
+                if (SUCCEEDED((stream->Seek(position, STREAM_SEEK_SET, NULL)))) {
+                    ULONG cbRead;
+                    if (SUCCEEDED(stream->Read(metadata->Buffer, cbSize, &cbRead))) {
+                        metadatas.emplace_back(metadata);
                     }
                 }
             }
         }
+    }
+    return S_OK;
+}
+
+static
+void ReadMetadataReqursive(IWICMetadataReader* reader, std::deque<std::shared_ptr<Metadata>>& metadatas)
+{
+    HRESULT result = S_OK;
+
+    GUID metadataFormat;
+    if (SUCCEEDED(reader->GetMetadataFormat(&metadataFormat)))
+    {
+        if (IsEqualGUID(metadataFormat, GUID_MetadataFormatExif))
+        {
+            SaveMetadata(reader, "eXif", metadatas);
+            return;
+        }
+        else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatXMP)) {
+            SaveMetadata(reader, "eXmp", metadatas);
+            return;
+        }
+        else if (IsEqualGUID(metadataFormat, GUID_MetadataFormatChunkiCCP))
+        {
+            SaveMetadata(reader, "iCCP", metadatas);
+            return;
+        }
+    }
+
+    UINT count = 0;
+    result = reader->GetCount(&count);
+    if (FAILED(result))
+        return;
+    for (UINT i = 0; i < count; ++i)
+    {
+        PROPVARIANT id, value;
+
+        PropVariantInit(&id);
+        PropVariantInit(&value);
+        result = reader->GetValueByIndex(i, nullptr, &id, &value);
+        if (SUCCEEDED(result)) {
+            if (VT_UNKNOWN == value.vt)
+            {
+                ComPtr<IWICMetadataReader> subReader;
+                result = value.punkVal->QueryInterface(subReader.get_out_storage());
+                if (SUCCEEDED(result))
+                {
+                    ReadMetadataReqursive(subReader.get(), metadatas);
+                }
+            }
+            PropVariantClear(&id);
+            PropVariantClear(&value);
+        }
+    }
+}
+
+HRESULT  EncodeFrame::MetadataBlockWriter::GetMetadatas(std::deque<std::shared_ptr<Metadata>>& metadatas)
+{
+    TRACE("()\n");
+    for (int i = 0; i < metadataWriter_.size(); ++i)
+    {
+        ReadMetadataReqursive(metadataWriter_[i].get(), metadatas);
     }
     return S_OK;
 }

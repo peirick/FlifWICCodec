@@ -30,6 +30,7 @@ public:
     UINT GetWidth();
     UINT GetHeight();
     UINT GetBitDepth();
+    UINT GetFrameCount();
 private:
     // No copy and assign.
     DecodeContainer(const DecodeContainer&) = delete;

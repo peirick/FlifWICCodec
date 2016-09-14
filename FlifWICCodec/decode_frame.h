@@ -26,7 +26,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetColorContexts(UINT cCount, IWICColorContext **ppIColorContexts, UINT *pcActualCount) override;
     HRESULT STDMETHODCALLTYPE GetThumbnail(IWICBitmapSource **ppIThumbnail) override;
 
-    void SetFlifImage(FLIF_IMAGE* image);
+    void SetFlifImage(FLIF_IMAGE* image, UINT totalNumberImages);
 private:
 
     class MetadataBlockReader : public IWICMetadataBlockReader {
@@ -53,10 +53,15 @@ private:
     DecodeFrame(const DecodeFrame&) = delete;
     void operator=(const DecodeFrame&) = delete;
     HRESULT InitializeFactory();
+private:
+    UINT GetWidth();
+    UINT GetHeight();
+    UINT GetDelay();
 
     CRITICAL_SECTION cs_;
     ComPtr<IWICImagingFactory>   factory_;
     ComPtr<IWICComponentFactory> componentFactory_;
     MetadataBlockReader          metadataBlockReader_;
     FLIF_IMAGE*				     image_;
+    UINT                         totalNumberOfImages_;
 };

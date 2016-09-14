@@ -8,7 +8,8 @@
 struct SupportedMetadata {
     const PROPERTYKEY& key;
     LPCWSTR            photoMetadataPolicy;
-    LPCWSTR            wicMetadataQuery;
+    LPCWSTR            xmpMetadataQuery;
+    //LPCWSTR            exifMetadataQuery;
     const bool         isWritable;
 };
 
@@ -26,7 +27,21 @@ SupportedMetadata supported_metadatas[] = {
     { PKEY_Image_Dimensions,          nullptr,                nullptr,                            false  },
     { PKEY_Rating,                    L"System.Rating",                   L"/xmp/xmp:Rating",     false  },
     { PKEY_Photo_CameraModel,         L"System.Photo.CameraModel",        L"/xmp/tiff:Model",     false  },
-    { PKEY_Photo_CameraManufacturer,  L"System.Photo.CameraManufacturer", L"/xmp/tiff:make",      false  },
+    { PKEY_Photo_CameraManufacturer,  L"System.Photo.CameraManufacturer", L"/xmp/tiff:Make",      false  },
+    { PKEY_Photo_CameraSerialNumber,  L"System.Photo.CameraSerialNumber", L"/xmp/MicrosoftPhoto:CameraSerialNumber",      false  },
+
+    { PKEY_Photo_Aperture,            L"System.Photo.Aperture",     L"/xmp/exif:ApertureValue",    false  },
+    { PKEY_Photo_Brightness,          L"System.Photo.Brightness",   L"/xmp/exif:BrightnessValue",  false  },
+    { PKEY_Photo_Contrast,            L"System.Photo.Contrast",     L"/xmp/exif:Contrast",         false  },
+    { PKEY_Photo_DateTaken,           L"System.Photo.DateTaken",    L"/xmp/xmp:CreateDate",        false  },
+    { PKEY_Photo_DigitalZoom,         L"System.Photo.DigitalZoom",  L"/xmp/exif:DigitalZoomRatio", false  },
+    { PKEY_Photo_EXIFVersion,         L"System.Photo.EXIFVersion",  L"/xmp/exif:ExifVersion",      false  },
+    { PKEY_Photo_ExposureBias,        L"System.Photo.ExposureBias", L"/xmp/exif:ExposureBiasValue", false  },
+    { PKEY_Photo_ExposureTime,        L"System.Photo.ExposureTime", L"/xmp/exif:ExposureTime",     false  },
+
+    { PKEY_GPS_Altitude,              L"System.GPS.Altitude",       L"/xmp/exif:GPSAltitude",      false  },
+    { PKEY_GPS_Latitude,              L"System.GPS.Latitude",       L"/xmp/exif:GPSLatitude",    false  },
+    { PKEY_GPS_Longitude,             L"System.GPS.Longitude" ,     L"/xmp/exif:GPSLongitude",    false  },
 };
 
 MetadataStore::MetadataStore()

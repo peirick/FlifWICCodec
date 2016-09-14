@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <memory>
 #include <Shlwapi.h>
+#include <propvarutil.h>
 #include "decode_frame.h"
 #include "dllmain.h"
 #include "uuid.h"
@@ -19,10 +20,11 @@ DecodeFrame::DecodeFrame()
     InitializeCriticalSection(&cs_);
 }
 
-void DecodeFrame::SetFlifImage(FLIF_IMAGE * image)
+void DecodeFrame::SetFlifImage(FLIF_IMAGE * image, UINT totalNumberOfImages)
 {
     SectionLock l(&cs_);
     image_ = image;
+    totalNumberOfImages_ = totalNumberOfImages;
 }
 
 DecodeFrame::~DecodeFrame()
@@ -62,8 +64,8 @@ HRESULT DecodeFrame::GetSize(UINT *puiWidth, UINT *puiHeight) {
     TRACE2("(%p, %p)\n", puiWidth, puiHeight);
     if (puiWidth == nullptr || puiHeight == nullptr)
         return E_INVALIDARG;
-    *puiWidth = flif_image_get_width(image_);
-    *puiHeight = flif_image_get_height(image_);
+    *puiWidth = GetWidth();
+    *puiHeight = GetHeight();
     TRACE2("ret: %u x %u\n", *puiWidth, *puiHeight);
     return S_OK;
 }
@@ -98,8 +100,8 @@ HRESULT DecodeFrame::CopyPixels(const WICRect *prc, UINT cbStride, UINT cbBuffer
     TRACE4("(%p, %u, %u, %p)\n", prc, cbStride, cbBufferSize, pbBuffer);
     if (pbBuffer == nullptr)
         return E_INVALIDARG;
-    uint32_t image_width = flif_image_get_width(image_);
-    uint32_t image_height = flif_image_get_height(image_);
+    uint32_t image_width = GetWidth();
+    uint32_t image_height = GetHeight();
     uint8_t nb_channels = 4; // flif_image_get_nb_channels(image_);
 
     WICRect rect = { 0, 0, image_width, image_height };
@@ -192,6 +194,21 @@ HRESULT DecodeFrame::InitializeFactory()
     return result;
 }
 
+UINT DecodeFrame::GetWidth()
+{
+    return flif_image_get_width(image_);
+}
+
+UINT DecodeFrame::GetHeight()
+{
+    return flif_image_get_height(image_);
+}
+
+UINT DecodeFrame::GetDelay()
+{
+    return flif_image_get_frame_delay(image_);
+}
+
 HRESULT DecodeFrame::MetadataBlockReader::GetContainerFormat(GUID * pguidContainerFormat)
 {
     TRACE1("(%p)\n", pguidContainerFormat);
@@ -240,12 +257,97 @@ HRESULT DecodeFrame::MetadataBlockReader::GetEnumerator(IEnumUnknown ** ppIEnumM
     return E_NOTIMPL;
 }
 
+static
+inline HRESULT InitPropVariantFromUInt8(_In_ UCHAR uiVal, _Out_ PROPVARIANT *ppropvar)
+{
+    ppropvar->vt = VT_UI1;
+    ppropvar->bVal = uiVal;
+    return S_OK;
+}
+
 void  DecodeFrame::MetadataBlockReader::ReadAllMetadata()
 {
     TRACE("()\n");
     ReadMetadata(GUID_MetadataFormatExif, "eXif");
     ReadMetadata(GUID_MetadataFormatXMP, "eXmp");
     ReadMetadata(GUID_MetadataFormatChunkiCCP, "iCCP");
+
+    if (decodeFrame_.totalNumberOfImages_ > 1)
+    {
+        ComPtr<IWICMetadataWriter> writer;
+
+        if (SUCCEEDED(decodeFrame_.componentFactory_->CreateMetadataWriter(
+            GUID_MetadataFormatIMD,
+            nullptr,
+            WICPersistOptionDefault,
+            writer.get_out_storage())))
+        {
+            PROPVARIANT key;
+            PROPVARIANT value;
+
+            InitPropVariantFromString(L"Left", &key);
+            InitPropVariantFromUInt16(0, &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            InitPropVariantFromString(L"Top", &key);
+            InitPropVariantFromUInt16(0, &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            InitPropVariantFromString(L"Width", &key);
+            InitPropVariantFromUInt16(decodeFrame_.GetWidth(), &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            InitPropVariantFromString(L"Height", &key);
+            InitPropVariantFromUInt16(decodeFrame_.GetHeight(), &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            // Store for later use
+            ComPtr<IWICMetadataReader> reader;
+            if (SUCCEEDED(writer->QueryInterface(reader.get_out_storage())))
+                metadataReader_.emplace_back(reader.new_ref());
+        }
+
+        if (SUCCEEDED(decodeFrame_.componentFactory_->CreateMetadataWriter(
+            GUID_MetadataFormatGCE,
+            nullptr,
+            WICPersistOptionDefault,
+            writer.get_out_storage())))
+        {
+            PROPVARIANT key;
+            PROPVARIANT value;
+
+            InitPropVariantFromString(L"Disposal", &key);
+            InitPropVariantFromUInt8(0, &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            InitPropVariantFromString(L"Delay", &key);
+            InitPropVariantFromUInt16(decodeFrame_.GetDelay() / 10, &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            InitPropVariantFromString(L"TransparencyFlag", &key);
+            InitPropVariantFromBoolean(FALSE, &value);
+            writer->SetValue(nullptr, &key, &value);
+            PropVariantClear(&key);
+            PropVariantClear(&value);
+
+            // Store for later use
+            ComPtr<IWICMetadataReader> reader;
+            if (SUCCEEDED(writer->QueryInterface(reader.get_out_storage())))
+                metadataReader_.emplace_back(reader.new_ref());
+        }
+    }
 }
 
 void DecodeFrame::MetadataBlockReader::ReadMetadata(GUID metadataFormat, const char* name)

@@ -178,7 +178,7 @@ HRESULT DecodeContainer::Decode(bool onlyInfos)
                     if (frames_[i].get() == nullptr)
                         return E_OUTOFMEMORY;
                 }
-                frames_[i]->SetFlifImage(image);
+                frames_[i]->SetFlifImage(image, num_images);
             }
             else {
                 frames_[i].reset(nullptr);
@@ -290,11 +290,10 @@ HRESULT DecodeContainer::GetFrameCount(UINT* pCount) {
     if (pCount == nullptr)
         return E_INVALIDARG;
 
-    HRESULT result = DecodeCached(true);
-    if (FAILED(result))
-        return result;
+    if (info_ == nullptr)
+        return WINCODEC_ERR_NOTINITIALIZED;
 
-    *pCount = frames_.size();
+    *pCount = GetFrameCount();
     return S_OK;
 }
 
@@ -327,6 +326,10 @@ UINT DecodeContainer::GetBitDepth()
     return info_ ? flif_info_get_depth(info_) : 0;
 }
 
+UINT DecodeContainer::GetFrameCount()
+{
+    return info_ ? flif_info_num_images(info_) : 0;
+}
 
 
 

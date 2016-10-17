@@ -6,7 +6,11 @@
 #include "decode_frame.h"
 
 DecodeContainer::DecodeContainer()
-    : has_been_decoded_(false), decoder_(nullptr), info_(nullptr)
+    : has_been_decoded_(false),
+    has_only_infos_decoded_(false),
+    last_decode_desult(0),
+    info_(nullptr),
+    decoder_(nullptr)
 {
     TRACE("()\n");
     InitializeCriticalSection(&cs_);
@@ -121,7 +125,6 @@ HRESULT DecodeContainer::DecodeCached(bool decode_only_infos)
 
 HRESULT DecodeContainer::Decode(bool onlyInfos)
 {
-    //Todo: Cleanup code
     if (stream_.get() == nullptr)
         return WINCODEC_ERR_NOTINITIALIZED;
 
@@ -311,22 +314,22 @@ HRESULT DecodeContainer::GetFrame(UINT index, IWICBitmapFrameDecode** ppIBitmapF
     return S_OK;
 }
 
-UINT DecodeContainer::GetWidth()
+UINT DecodeContainer::GetWidth() const
 {
     return info_ ? flif_info_get_width(info_) : 0;
 }
 
-UINT DecodeContainer::GetHeight()
+UINT DecodeContainer::GetHeight() const
 {
     return info_ ? flif_info_get_height(info_) : 0;
 }
 
-UINT DecodeContainer::GetBitDepth()
+UINT DecodeContainer::GetBitDepth() const
 {
     return info_ ? flif_info_get_depth(info_) : 0;
 }
 
-UINT DecodeContainer::GetFrameCount()
+UINT DecodeContainer::GetFrameCount() const
 {
     return info_ ? flif_info_num_images(info_) : 0;
 }

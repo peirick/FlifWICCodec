@@ -14,7 +14,9 @@
 
 
 DecodeFrame::DecodeFrame()
-    : metadataBlockReader_(*this)
+    : metadataBlockReader_(*this),
+    image_(nullptr),
+    totalNumberOfImages_(0)
 {
     TRACE("()\n");
     InitializeCriticalSection(&cs_);
@@ -194,17 +196,17 @@ HRESULT DecodeFrame::InitializeFactory()
     return result;
 }
 
-UINT DecodeFrame::GetWidth()
+UINT DecodeFrame::GetWidth() const
 {
     return flif_image_get_width(image_);
 }
 
-UINT DecodeFrame::GetHeight()
+UINT DecodeFrame::GetHeight() const
 {
     return flif_image_get_height(image_);
 }
 
-UINT DecodeFrame::GetDelay()
+UINT DecodeFrame::GetDelay() const
 {
     return flif_image_get_frame_delay(image_);
 }

@@ -4,7 +4,7 @@
 #include "pixel_converter.h"
 
 EncodeContainer::EncodeContainer()
-    : encoder_(nullptr), current_frame_(nullptr)
+    : current_frame_(nullptr), encoder_(nullptr), pIStream_(nullptr)
 {
     TRACE("()\n");
     InitializeCriticalSection(&cs_);

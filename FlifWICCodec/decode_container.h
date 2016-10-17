@@ -27,10 +27,10 @@ public:
     HRESULT STDMETHODCALLTYPE GetFrameCount(UINT *pCount)override;
     HRESULT STDMETHODCALLTYPE GetFrame(UINT index, IWICBitmapFrameDecode **ppIBitmapFrame)override;
 public:
-    UINT GetWidth();
-    UINT GetHeight();
-    UINT GetBitDepth();
-    UINT GetFrameCount();
+    UINT GetWidth() const;
+    UINT GetHeight() const;
+    UINT GetBitDepth() const;
+    UINT GetFrameCount() const;
 private:
     // No copy and assign.
     DecodeContainer(const DecodeContainer&) = delete;

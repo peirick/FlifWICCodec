@@ -1,6 +1,5 @@
 #include <Shlwapi.h>
 #include "encode_frame.h"
-#include "pixel_converter.h"
 #include "uuid.h"
 
 EncodeFrame::EncodeFrame(EncodeContainer* container)
@@ -537,7 +536,7 @@ HRESULT SaveMetadata(IWICMetadataReader* reader,
     ComPtr<IWICPersistStream> persistStream;
     if (SUCCEEDED(reader->QueryInterface(persistStream.get_out_storage())))
     {
-        IStream* stream = SHCreateMemStream(NULL, 0);
+        IStream* stream = SHCreateMemStream(nullptr, 0);
         if (SUCCEEDED(persistStream->SaveEx(stream, WICMetadataCreationAllowUnknown | WICPersistOptionDefault, FALSE))) {
             // Allocates enough memeory for the content.
             STATSTG ssStreamData = {};

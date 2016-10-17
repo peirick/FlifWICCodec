@@ -102,7 +102,7 @@ typedef HRESULT(*ObjectConstructor)(IUnknown** ppvObject);
 template<typename T>
 HRESULT CreateComObject(IUnknown** output) {
     T* result = new (std::nothrow) T();
-    if (result == NULL)
+    if (result == nullptr)
         return E_OUTOFMEMORY;
     *output = static_cast<IUnknown*>(result);
     return S_OK;
@@ -113,12 +113,12 @@ class MyClassFactory : public ComObjectBase<IClassFactory>
 public:
     MyClassFactory(ObjectConstructor ctor);
     // IUnknown:
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
-    ULONG STDMETHODCALLTYPE AddRef() { return ComObjectBase::AddRef(); }
-    ULONG STDMETHODCALLTYPE Release() { return ComObjectBase::Release(); }
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override;
+    ULONG STDMETHODCALLTYPE AddRef() override { return ComObjectBase::AddRef(); }
+    ULONG STDMETHODCALLTYPE Release() override { return ComObjectBase::Release(); }
     // IClassFactory:
-    HRESULT STDMETHODCALLTYPE CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppvObject);
-    HRESULT STDMETHODCALLTYPE LockServer(BOOL fLock);
+    HRESULT STDMETHODCALLTYPE CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppvObject) override;
+    HRESULT STDMETHODCALLTYPE LockServer(BOOL fLock) override;
 
 private:
     volatile LONG ref_count_;
@@ -133,9 +133,9 @@ MyClassFactory::MyClassFactory(ObjectConstructor ctor) {
 
 HRESULT MyClassFactory::QueryInterface(REFIID riid, void **ppvObject)
 {
-    if (ppvObject == NULL)
+    if (ppvObject == nullptr)
         return E_INVALIDARG;
-    *ppvObject = NULL;
+    *ppvObject = nullptr;
 
     if (!IsEqualGUID(riid, IID_IUnknown) && !IsEqualGUID(riid, IID_IClassFactory))
         return E_NOINTERFACE;
@@ -150,11 +150,11 @@ HRESULT MyClassFactory::CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** 
     HRESULT ret;
     TRACE3("(%p, %s, %p)\n", pUnkOuter, debugstr_guid(riid), ppvObject);
 
-    if (ppvObject == NULL)
+    if (ppvObject == nullptr)
         return E_INVALIDARG;
-    *ppvObject = NULL;
+    *ppvObject = nullptr;
 
-    if (pUnkOuter != NULL)
+    if (pUnkOuter != nullptr)
         return CLASS_E_NOAGGREGATION;
 
     ret = ctor_(&output);
@@ -162,8 +162,9 @@ HRESULT MyClassFactory::CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** 
         return ret;
     ret = output->QueryInterface(riid, ppvObject);
     output->Release();
-    if (FAILED(ret))
-        ppvObject = NULL;
+    if (FAILED(ret)) {
+        *ppvObject = nullptr;
+    }
     TRACE1("ret=%08x\n", ret);
     return ret;
 }
@@ -183,8 +184,8 @@ typedef void (STDAPICALLTYPE *SHChangeNotifyFunc)(LONG wEventId, UINT uFlags, LP
 
 static HRESULT RegisterServer(BOOL fInstall) {
     // Manual loading of advpack not to load it when DLL used in normal opertion.
-    HMODULE hAdvPack = LoadLibraryExW(L"advpack.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-    if (hAdvPack == NULL) {
+    HMODULE hAdvPack = LoadLibraryExW(L"advpack.dll", nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    if (hAdvPack == nullptr) {
         TRACE("Couldn't load advpack.dll\n");
         return E_UNEXPECTED;
     }
@@ -220,14 +221,14 @@ static HRESULT RegisterServer(BOOL fInstall) {
         return E_UNEXPECTED;
 
     // Invalidate caches.
-    HMODULE hShell32 = LoadLibraryExW(L"shell32.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    HMODULE hShell32 = LoadLibraryExW(L"shell32.dll", nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
     if (!hShell32) {
         TRACE("Couldn't load shell32.dll\n");
         return E_UNEXPECTED;
     }
     SHChangeNotifyFunc pSHChangeNotify = (SHChangeNotifyFunc)GetProcAddress(hShell32, "SHChangeNotify");
     if (pSHChangeNotify)
-        pSHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
+        pSHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
     return S_OK;
 }
 
@@ -242,9 +243,9 @@ STDAPI DllUnregisterServer() {
 _Check_return_
 STDAPI DllGetClassObject(_In_ REFCLSID clsid, _In_ REFIID iid, _Outptr_ LPVOID FAR* ppv)
 {
-    if (ppv == NULL)
+    if (ppv == nullptr)
         return E_INVALIDARG;
-    *ppv = NULL;
+    *ppv = nullptr;
     TRACE3("(%s, %s, %p)\n", debugstr_guid(clsid), debugstr_guid(iid), ppv);
     if (!IsEqualGUID(iid, IID_IClassFactory))
         return E_INVALIDARG;
@@ -262,7 +263,7 @@ STDAPI DllGetClassObject(_In_ REFCLSID clsid, _In_ REFIID iid, _Outptr_ LPVOID F
         return CLASS_E_CLASSNOTAVAILABLE;
     }
 
-    if (*ppv == NULL)
+    if (*ppv == nullptr)
         return E_OUTOFMEMORY;
     return S_OK;
 }

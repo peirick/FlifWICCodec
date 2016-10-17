@@ -1,11 +1,18 @@
 #include <propsys.h>
 #include <Propvarutil.h>
-#include <comutil.h>
 #include "metadata_store.h"
 #include "decode_frame.h"
 
 
 struct SupportedMetadata {
+    SupportedMetadata(const PROPERTYKEY& key, LPCWSTR photo_metadata_policy, LPCWSTR xmp_metadata_query, bool is_writable)
+        : key(key),
+          photoMetadataPolicy(photo_metadata_policy),
+          xmpMetadataQuery(xmp_metadata_query),
+          isWritable(is_writable)
+    {
+    }
+
     const PROPERTYKEY& key;
     LPCWSTR            photoMetadataPolicy;
     LPCWSTR            xmpMetadataQuery;

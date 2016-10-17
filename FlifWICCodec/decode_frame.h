@@ -54,9 +54,9 @@ private:
     void operator=(const DecodeFrame&) = delete;
     HRESULT InitializeFactory();
 private:
-    UINT GetWidth();
-    UINT GetHeight();
-    UINT GetDelay();
+    UINT GetWidth() const;
+    UINT GetHeight() const;
+    UINT GetDelay() const;
 
     CRITICAL_SECTION cs_;
     ComPtr<IWICImagingFactory>   factory_;

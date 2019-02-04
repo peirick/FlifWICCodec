@@ -15,6 +15,10 @@ in Windows PhotoViewer and Windows Explorer.
 ```
 regsvr32 FlifWICCodec.dll
 ```
+4. on a 64bit system, execute:
+```
+%SystemRoot%\Syswow64\regsvr32 FlifWICCodec.dll
+```
 
 ## Uninstall
 1. open an administrative command prompt
@@ -22,6 +26,10 @@ regsvr32 FlifWICCodec.dll
 3. execute:
 ```
 regsvr32 -u FlifWICCodec.dll
+```
+4. on a 64bit system, execute:
+```
+%SystemRoot%\Syswow64\regsvr32 -u FlifWICCodec.dll
 ```
 
 ## Used Repositories
